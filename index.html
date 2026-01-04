@@ -3,155 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CW Workshop</title>
+    <title>CW Workshop Manager</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        :root { --bg: #f2f2f7; --accent: #007aff; --card: #ffffff; --text: #000000; --sec: #8e8e93; --radius: 16px; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 90px; }
-        .header { background: #fff; padding: 20px; text-align: center; border-bottom: 0.5px solid #d1d1d6; }
-        .card { background: var(--card); margin: 12px; padding: 16px; border-radius: var(--radius); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .nav { position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; padding: 10px 0 25px; border-top: 0.5px solid #d1d1d6; }
-        .nav-item { flex: 1; text-align: center; color: var(--sec); font-size: 10px; border: none; background: none; }
+        :root { --bg: #f8f9fb; --accent: #5856d6; --card: #ffffff; --text: #1c1c1e; --secondary: #8e8e93; --green: #34c759; --red: #ff3b30; --radius: 20px; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 100px; overflow-x: hidden; }
+        .balance-header { background: #1c1c1e; color: white; margin: 15px; padding: 25px; border-radius: var(--radius); text-align: center; }
+        .card { background: var(--card); margin: 12px; padding: 18px; border-radius: var(--radius); box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; }
+        .nav-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; padding: 10px 0 25px; border-top: 0.5px solid #eee; z-index: 1000; }
+        .nav-item { flex: 1; text-align: center; color: var(--secondary); font-size: 10px; }
         .nav-item.active { color: var(--accent); }
-        .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
-        .btn-main { width: 100%; background: var(--accent); color: #fff; border: none; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 16px; }
-        .input { width: 100%; background: #f2f2f7; border: none; padding: 12px; border-radius: 10px; margin-bottom: 10px; box-sizing: border-box; }
-        .add-fab { position: fixed; bottom: 85px; right: 20px; width: 56px; height: 56px; background: var(--accent); color: #fff; border-radius: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,122,255,0.3); }
-        .modal { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 20px 20px 0 0; padding: 20px; transform: translateY(100%); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; }
-        .modal.active { transform: translateY(0); }
-        .blur { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: none; z-index: 999; }
-        .blur.active { display: block; }
+        .status-badge { padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: bold; }
+        .input-pill { width: 100%; background: #f2f2f7; border: none; padding: 14px; border-radius: 12px; margin-bottom: 10px; font-size: 15px; }
+        .add-btn { position: fixed; bottom: 85px; right: 20px; width: 56px; height: 56px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 15px rgba(88,86,214,0.4); z-index: 999; }
+        .modal-sheet { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-radius: 25px 25px 0 0; padding: 20px; transform: translateY(100%); transition: 0.3s ease; z-index: 2000; }
+        .modal-sheet.active { transform: translateY(0); }
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: 0.3s; z-index: 1999; }
+        .overlay.active { opacity: 1; pointer-events: auto; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <div style="font-size: 13px; color: var(--sec);">Текущий баланс</div>
-    <div style="font-size: 24px; font-weight: 800;"><span id="balance">0.00</span> BYN</div>
-</div>
+    <div class="balance-header">
+        <div style="font-size: 12px; opacity: 0.6; margin-bottom: 5px;">Прибыль мастерской</div>
+        <div style="font-size: 28px; font-weight: 800;"><span id="totalBalance">0.00</span> BYN</div>
+    </div>
 
-<div id="content"></div>
+    <div id="app-content"></div>
 
-<div class="add-fab" onclick="toggleModal(true)"><i data-lucide="plus"></i></div>
+    <div class="add-btn" onclick="openOrderModal()"><i data-lucide="plus"></i></div>
 
-<div class="blur" id="blur" onclick="toggleModal(false)"></div>
-<div class="modal" id="modal">
-    <h3 style="margin: 0 0 15px 0;">Новый заказ</h3>
-    <input type="text" id="nick" class="input" placeholder="Ник Instagram">
-    <select id="item" class="input">
-        <option value="Брелок">🐶 Брелок</option>
-        <option value="Брошь">🐈 Брошь</option>
-        <option value="Магнит">🧲 Магнит</option>
-    </select>
-    <input type="number" id="price" class="input" placeholder="Цена (BYN)" inputmode="decimal">
-    <input type="text" id="comm" class="input" placeholder="Комментарий">
-    <button class="btn-main" onclick="saveOrder()">Добавить в таблицу</button>
-</div>
+    <nav class="nav-bar">
+        <div class="nav-item active" onclick="switchTab('orders', this)"><i data-lucide="package"></i><div>Заказы</div></div>
+        <div class="nav-item" onclick="switchTab('budget', this)"><i data-lucide="bar-chart-3"></i><div>Финансы</div></div>
+        <div class="nav-item" onclick="switchTab('shopping', this)"><i data-lucide="shopping-cart"></i><div>Закупка</div></div>
+    </nav>
 
-<nav class="nav">
-    <button class="nav-item active" onclick="tab('orders', this)"><i data-lucide="list"></i><div>Заказы</div></button>
-    <button class="nav-item" onclick="tab('budget', this)"><i data-lucide="wallet"></i><div>Финансы</div></button>
-</nav>
+    <div id="overlay" class="overlay" onclick="closeModals()"></div>
+
+    <div id="orderModal" class="modal-sheet">
+        <h3 style="margin-top:0">Новый заказ</h3>
+        <input type="text" id="ordNick" class="input-pill" placeholder="Ник в Instagram">
+        <select id="ordItem" class="input-pill">
+            <option value="Брелок">🐶 Брелок</option>
+            <option value="Брошь">🐈 Брошь</option>
+            <option value="Магнит">🧲 Магнит</option>
+        </select>
+        <input type="number" id="ordPrice" class="input-pill" placeholder="Сумма (BYN)">
+        <textarea id="ordComm" class="input-pill" placeholder="Комментарий к заказу" rows="3"></textarea>
+        <button onclick="saveOrder()" style="width:100%; background:var(--accent); color:white; border:none; padding:15px; border-radius:12px; font-weight:bold;">Создать заказ</button>
+    </div>
 
 <script>
-    const URL = "https://script.google.com/macros/s/AKfycbxdE6weGTsp1NMVfsk8uPhTEyNIdJRtYXIakBtAGIDf8PSo-VofYQZJFbjlvXPcUtH9/exec";
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbxdE6weGTsp1NMVfsk8uPhTEyNIdJRtYXIakBtAGIDf8PSo-VofYQZJFbjlvXPcUtH9/exec";
     let currentTab = 'orders';
 
-    async function tab(t, el) {
-        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    async function switchTab(tab, el) {
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         el.classList.add('active');
-        currentTab = t;
-        load();
+        currentTab = tab;
+        loadData();
     }
 
-    async function load() {
-        const res = await fetch(`${URL}?action=${currentTab === 'orders' ? 'getOrders' : 'getBudget'}`);
-        const data = await res.json();
+    async function loadData() {
+        const cont = document.getElementById('app-content');
+        cont.innerHTML = '<div style="text-align:center; padding:40px; color:gray;">Загрузка...</div>';
         
-        if (currentTab === 'orders') renderOrders(data);
-        else renderBudget(data);
-        
-        // Обновляем баланс всегда при загрузке бюджета
-        if (currentTab === 'budget') document.getElementById('balance').innerText = (data.totalIncome - data.totalExpense).toFixed(2);
+        try {
+            const action = currentTab === 'orders' ? '?action=getOrders' : (currentTab === 'budget' ? '' : '?action=getShopping');
+            const res = await fetch(SHEET_URL + action);
+            const data = await res.json();
+            
+            if (currentTab === 'orders') renderOrders(data);
+            else if (currentTab === 'budget') renderBudget(data);
+            else if (currentTab === 'shopping') renderShopping(data);
+        } catch (e) { 
+            cont.innerHTML = '<div style="padding:20px; color:red; text-align:center;">Ошибка соединения</div>'; 
+        }
         lucide.createIcons();
     }
 
     function renderOrders(data) {
         let html = '';
         data.reverse().forEach(o => {
-            const st = o.Статус || 'Новый';
-            const color = st === 'Новый' ? '#ff9500' : st === 'В работе' ? '#007aff' : '#34c759';
+            const colors = {'Новый':'#ff9500','В работе':'#007aff','Готов':'#34c759','Отправлен':'#8e8e93'};
             html += `
-            <div class="card animate__animated animate__fadeIn">
-                <div style="display:flex; justify-content:space-between; align-items:start;">
-                    <b>${o['Ник Instagram']}</b>
-                    <span class="badge" style="background:${color}15; color:${color}">${st}</span>
-                </div>
-                <div style="font-size:12px; color:var(--sec); margin:4px 0;">${o['Тип изделия']} • ${o.Дата}</div>
-                <div style="font-size:14px; margin-top:8px;">${o.Комментарий || ''}</div>
-                <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:700;">${o.Цена} BYN</span>
-                    <select onchange="updateStatus('${o.ID}', this.value)" style="font-size:12px; border:none; background:#f2f2f7; padding:4px; border-radius:4px;">
-                        <option value="" disabled selected>Статус</option>
-                        <option value="В работе">В работе</option>
-                        <option value="Готов">Готов</option>
-                        <option value="Отправлен">Отправлен</option>
-                    </select>
-                </div>
-            </div>`;
+                <div class="card animate__animated animate__fadeIn">
+                    <div style="display:flex; justify-content:space-between;">
+                        <b>${o['Ник Instagram']}</b>
+                        <span class="status-badge" style="background:${colors[o.Статус]}20; color:${colors[o.Статус]}">${o.Статус}</span>
+                    </div>
+                    <div style="font-size:13px; color:gray; margin:5px 0;">${o['Тип изделия']} • ${o.Дата}</div>
+                    <div style="font-size:14px;">${o.Комментарий || ''}</div>
+                    <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-weight:bold;">${o.Цена} BYN</span>
+                        <select onchange="updateStatus('${o.ID}', this.value)" style="border:none; background:#f2f2f7; padding:5px; border-radius:5px; font-size:12px;">
+                            <option value="" disabled selected>Изменить статус</option>
+                            <option value="В работе">В работе</option>
+                            <option value="Готов">Готов</option>
+                            <option value="Отправлен">Отправлен</option>
+                        </select>
+                    </div>
+                </div>`;
         });
-        document.getElementById('content').innerHTML = html || '<p style="text-align:center; color:gray;">Заказов нет</p>';
+        document.getElementById('app-content').innerHTML = html || '<div style="text-align:center; margin-top:50px;">Заказов пока нет</div>';
     }
 
-    function renderBudget(data) {
-        let html = '<div class="card"><h3>История операций</h3>';
-        data.operations.reverse().forEach(op => {
-            const isInc = op.type === 'income';
-            html += `
-            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:0.5px solid #eee;">
-                <div><div style="font-weight:600;">${op.category}</div><div style="font-size:11px; color:gray;">${op.date}</div></div>
-                <div style="color:${isInc ? '#34c759' : '#ff3b30'}; font-weight:700;">${isInc ? '+' : '-'}${op.amount}</div>
-            </div>`;
+    async function updateStatus(id, newStatus) {
+        await fetch(SHEET_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({ action: 'updateOrderStatus', id: id, status: newStatus })
         });
-        document.getElementById('content').innerHTML = html + '</div>';
+        setTimeout(loadData, 500);
     }
 
-    async function updateStatus(id, st) {
-        await fetch(URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateOrderStatus', id, status: st }) });
-        Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-        setTimeout(load, 500);
+    function openOrderModal() {
+        document.getElementById('overlay').classList.add('active');
+        document.getElementById('orderModal').classList.add('active');
     }
 
-    function toggleModal(show) {
-        document.getElementById('modal').classList.toggle('active', show);
-        document.getElementById('blur').classList.toggle('active', show);
+    function closeModals() {
+        document.getElementById('overlay').classList.remove('active');
+        document.getElementById('orderModal').classList.remove('active');
     }
 
     async function saveOrder() {
-        const nick = document.getElementById('nick').value;
-        const price = document.getElementById('price').value;
-        if (!nick || !price) return;
+        const data = {
+            action: 'addOrder',
+            nick: document.getElementById('ordNick').value,
+            item: document.getElementById('ordItem').value,
+            price: document.getElementById('ordPrice').value,
+            comment: document.getElementById('ordComm').value
+        };
+        if(!data.nick || !data.price) return alert('Заполните данные');
         
-        toggleModal(false);
-        await fetch(URL, { 
-            method: 'POST', 
-            mode: 'no-cors', 
-            body: JSON.stringify({ 
-                action: 'addOrder', 
-                nick, 
-                item: document.getElementById('item').value, 
-                price, 
-                comment: document.getElementById('comm').value 
-            }) 
-        });
-        load();
+        closeModals();
+        await fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
+        loadData();
     }
 
-    Telegram.WebApp.expand();
-    load();
+    function init() {
+        window.Telegram.WebApp.expand();
+        loadData();
+    }
+    init();
 </script>
 </body>
 </html>
-

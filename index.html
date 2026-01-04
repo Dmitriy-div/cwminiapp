@@ -3,58 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CW Workshop Manager</title>
+    <title>CW Manager</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        :root { --bg: #f2f2f7; --accent: #5856d6; --card: #ffffff; --text: #1c1c1e; --secondary: #8e8e93; --radius: 16px; --green: #34c759; --red: #ff3b30; }
-        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 100px; overflow-x: hidden; }
+        :root { --bg: #f2f2f7; --accent: #5856d6; --card: #ffffff; --text: #1c1c1e; --secondary: #8e8e93; --radius: 18px; --green: #34c759; --red: #ff3b30; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 110px; }
         
-        /* Шапка */
-        .balance-header { background: #1c1c1e; color: white; margin: 0; padding: 30px 20px; border-radius: 0 0 25px 25px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .balance-label { font-size: 13px; opacity: 0.6; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .balance-amount { font-size: 32px; font-weight: 800; }
+        /* Header */
+        .header { background: #1c1c1e; color: white; padding: 25px 20px; border-radius: 0 0 25px 25px; text-align: center; }
+        .balance-val { font-size: 30px; font-weight: 800; margin-top: 5px; }
 
-        /* Контент */
-        .card { background: var(--card); margin: 12px 15px; padding: 16px; border-radius: var(--radius); box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 0.5px solid rgba(0,0,0,0.05); }
-        .card-title { font-weight: 700; font-size: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        /* Filter Chips */
+        .filter-bar { display: flex; gap: 8px; padding: 12px 15px; overflow-x: auto; scrollbar-width: none; }
+        .filter-bar::-webkit-scrollbar { display: none; }
+        .chip { padding: 8px 16px; background: white; border-radius: 20px; font-size: 13px; color: var(--secondary); white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .chip.active { background: var(--accent); color: white; font-weight: bold; }
+
+        /* Cards */
+        .card { background: var(--card); margin: 0 15px 12px; padding: 16px; border-radius: var(--radius); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .card-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         
-        /* Навигация */
-        .nav-bar { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); display: flex; padding: 10px 0 25px; border-top: 0.5px solid rgba(0,0,0,0.1); z-index: 1000; }
-        .nav-item { flex: 1; text-align: center; color: var(--secondary); font-size: 10px; transition: 0.2s; cursor: pointer; }
-        .nav-item i { margin-bottom: 4px; }
-        .nav-item.active { color: var(--accent); transform: translateY(-2px); }
+        .pay-btn { font-size: 11px; padding: 6px 12px; border-radius: 10px; border: none; font-weight: bold; }
+        .pay-done { background: #34c75920; color: #34c759; }
+        .pay-wait { background: #ff3b3020; color: #ff3b30; }
 
-        /* Кнопка плюс */
-        .add-btn { position: fixed; bottom: 90px; right: 20px; width: 56px; height: 56px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(88,86,214,0.4); z-index: 999; border: none; outline: none; }
+        .status-select { border: none; background: #f2f2f7; padding: 6px; border-radius: 8px; font-size: 12px; }
 
-        /* Модальные окна */
-        .modal-sheet { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-radius: 25px 25px 0 0; padding: 25px; transform: translateY(100%); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2000; box-sizing: border-box; }
+        /* Navigation */
+        .nav-bar { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); display: flex; padding: 10px 0 25px; border-top: 0.5px solid #ddd; z-index: 1000; }
+        .nav-item { flex: 1; text-align: center; color: var(--secondary); font-size: 10px; }
+        .nav-item.active { color: var(--accent); }
+
+        .add-btn { position: fixed; bottom: 90px; right: 20px; width: 56px; height: 56px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 15px rgba(88,86,214,0.3); z-index: 999; border: none; }
+
+        .modal-sheet { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-radius: 25px 25px 0 0; padding: 25px; transform: translateY(100%); transition: 0.3s ease; z-index: 2000; box-sizing: border-box; }
         .modal-sheet.active { transform: translateY(0); }
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: 0.3s; z-index: 1999; }
         .overlay.active { opacity: 1; pointer-events: auto; }
 
-        /* Поля ввода */
-        .input-pill { width: 100%; background: #f2f2f7; border: 1.5px solid transparent; padding: 14px; border-radius: 12px; margin-bottom: 12px; font-size: 16px; outline: none; box-sizing: border-box; transition: 0.2s; }
-        .input-pill:focus { border-color: var(--accent); background: white; }
-        .btn-submit { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; margin-top: 10px; }
-
-        .loader { text-align: center; padding: 50px; color: var(--secondary); font-size: 14px; }
-        .status-badge { padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+        .input-pill { width: 100%; background: #f2f2f7; border: none; padding: 14px; border-radius: 12px; margin-bottom: 12px; font-size: 16px; outline: none; box-sizing: border-box; }
+        .btn-submit { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="balance-header">
-        <div class="balance-label" id="balance-label">Чистая прибыль</div>
-        <div class="balance-amount"><span id="totalBalance">0.00</span> BYN</div>
+    <div class="header">
+        <div style="font-size: 11px; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px;">Чистая прибыль</div>
+        <div class="balance-val"><span id="totalBalance">0.00</span> BYN</div>
     </div>
 
-    <div id="app-content">
-        <div class="loader">Инициализация...</div>
+    <div id="filter-container">
+        <div class="filter-bar">
+            <div class="chip active" onclick="setFilter('Все', this)">Все</div>
+            <div class="chip" onclick="setFilter('Новый', this)">Новые</div>
+            <div class="chip" onclick="setFilter('В работе', this)">В работе</div>
+            <div class="chip" onclick="setFilter('Готов', this)">Готовы</div>
+            <div class="chip" onclick="setFilter('Отправлен', this)">Отправлены</div>
+        </div>
     </div>
+
+    <div id="app-content"></div>
 
     <button class="add-btn" id="mainAddBtn" onclick="openModal()"><i data-lucide="plus"></i></button>
 
@@ -62,7 +73,7 @@
         <div class="nav-item active" onclick="switchTab('orders', this)"><i data-lucide="package"></i><div>Заказы</div></div>
         <div class="nav-item" onclick="switchTab('shipments', this)"><i data-lucide="truck"></i><div>Отправки</div></div>
         <div class="nav-item" onclick="switchTab('shopping', this)"><i data-lucide="shopping-bag"></i><div>Закупки</div></div>
-        <div class="nav-item" onclick="switchTab('stats', this)"><i data-lucide="bar-chart-3"></i><div>Бюджет</div></div>
+        <div class="nav-item" onclick="switchTab('stats', this)"><i data-lucide="pie-chart"></i><div>Бюджет</div></div>
     </nav>
 
     <div id="overlay" class="overlay" onclick="closeModals()"></div>
@@ -70,210 +81,184 @@
     <div id="orderModal" class="modal-sheet">
         <h3 style="margin-top:0">Новый заказ</h3>
         <input type="text" id="ordNick" class="input-pill" placeholder="Ник в Instagram">
-        <input type="text" id="ordItem" class="input-pill" placeholder="Тип изделия (Брошь, брелок...)">
+        <select id="ordItem" class="input-pill">
+            <option value="" disabled selected>Тип изделия</option>
+            <option value="Брошь">🐈 Брошь</option>
+            <option value="Брелок">🐶 Брелок</option>
+            <option value="Магнит">🧲 Магнит</option>
+            <option value="Значок">🎨 Значок</option>
+        </select>
         <input type="number" id="ordPrice" class="input-pill" placeholder="Сумма (BYN)">
         <textarea id="ordComm" class="input-pill" placeholder="Комментарий" rows="2"></textarea>
-        <button onclick="saveOrder()" class="btn-submit">Создать заказ</button>
+        <button onclick="saveOrder()" class="btn-submit">Добавить</button>
     </div>
 
     <div id="shipModal" class="modal-sheet">
-        <h3 style="margin-top:0">Новое отправление</h3>
+        <h3 style="margin-top:0">Новая отправка</h3>
+        <input type="date" id="shipDate" class="input-pill">
         <input type="text" id="shipFio" class="input-pill" placeholder="ФИО получателя">
+        <select id="shipType" class="input-pill">
+            <option value="Европочта">📦 Европочта</option>
+            <option value="Белпочта">📮 Белпочта</option>
+            <option value="СДЭК">🚚 СДЭК</option>
+            <option value="Другое">🌐 Другое</option>
+        </select>
         <input type="text" id="shipTrack" class="input-pill" placeholder="Трек-номер">
         <input type="number" id="shipCost" class="input-pill" placeholder="Стоимость доставки (BYN)">
-        <button onclick="saveShipment()" class="btn-submit">Записать отправку</button>
+        <button onclick="saveShipment()" class="btn-submit">Записать</button>
     </div>
 
     <div id="purchaseModal" class="modal-sheet">
         <h3 style="margin-top:0">Новая закупка</h3>
         <input type="text" id="purType" class="input-pill" placeholder="Что купили?">
         <input type="number" id="purAmount" class="input-pill" placeholder="Сумма (BYN)">
-        <button onclick="savePurchase()" class="btn-submit">Записать расход</button>
+        <button onclick="savePurchase()" class="btn-submit">Сохранить расход</button>
     </div>
 
 <script>
-    // ССЫЛКА НА ВАШ ГУГЛ СКРИПТ (New Deployment)
-    const SHEET_URL = "https://script.google.com/macros/s/AKfycbzir-tbIUFXpXZmObNVS9OYFK-ni0FYdJekOPi56fIwp1jnojTyWojWuzcf3NmVnvNY/exec";
-    
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbyjHGD61gAFu9Y8GNg2X6cUcbjX6yKmaXpNBE6rwYiovOpml7hUrSOGnkH6jd32bWxV/exec"; 
     let currentTab = 'orders';
+    let currentFilter = 'Все';
     let appData = null;
 
-    // 1. Запуск приложения
     function init() {
         window.Telegram.WebApp.expand();
-        
-        // Сначала грузим из памяти (localStorage)
-        const cached = localStorage.getItem('cw_data_cache');
-        if (cached) {
-            appData = JSON.parse(cached);
-            renderCurrentTab();
-        }
-        
-        // Затем обновляем из сети
+        const cached = localStorage.getItem('cw_cache_final');
+        if (cached) { appData = JSON.parse(cached); renderCurrentTab(); }
         loadData();
     }
 
-    // 2. Получение ВСЕХ данных одним запросом
     async function loadData() {
         try {
             const res = await fetch(SHEET_URL);
             appData = await res.json();
-            
-            // Сохраняем в кэш
-            localStorage.setItem('cw_data_cache', JSON.stringify(appData));
-            
+            localStorage.setItem('cw_cache_final', JSON.stringify(appData));
             renderCurrentTab();
-        } catch (e) {
-            console.error("Ошибка загрузки", e);
-            if (!appData) {
-                document.getElementById('app-content').innerHTML = '<div class="loader" style="color:red">Ошибка соединения. Проверьте интернет.</div>';
-            }
-        }
+        } catch (e) { console.error(e); }
     }
 
-    // 3. Логика переключения вкладок (без запроса в сеть!)
     function switchTab(tab, el) {
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         el.classList.add('active');
         currentTab = tab;
-        
-        // Скрываем кнопку Плюс на странице статистики
+        document.getElementById('filter-container').style.display = (tab === 'orders') ? 'block' : 'none';
         document.getElementById('mainAddBtn').style.display = (tab === 'stats') ? 'none' : 'flex';
-        
         renderCurrentTab();
     }
 
-    // 4. Отрисовка текущей вкладки
+    function setFilter(status, el) {
+        currentFilter = status;
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        renderCurrentTab();
+    }
+
     function renderCurrentTab() {
         if (!appData) return;
-
-        // Обновляем общую сумму в шапке
         document.getElementById('totalBalance').innerText = appData.stats.netProfit;
-        
         const cont = document.getElementById('app-content');
         let html = '';
 
         if (currentTab === 'orders') {
-            appData.orders.slice().reverse().forEach(o => {
-                const colors = {'Новый':'#ff9500','В работе':'#007aff','Готов':'#34c759','Отправлен':'#8e8e93'};
+            const filtered = currentFilter === 'Все' ? appData.orders : appData.orders.filter(o => o.Статус === currentFilter);
+            filtered.slice().reverse().forEach(o => {
+                const isPaid = o['Оплата'] === 'Да';
                 html += `
                     <div class="card animate__animated animate__fadeIn">
-                        <div class="card-title">
-                            <span>${o['Ник Instagram'] || '—'}</span>
-                            <span class="status-badge" style="background:${colors[o.Статус] || '#8e8e93'}20; color:${colors[o.Статус] || '#8e8e93'}">${o.Статус || 'Новый'}</span>
+                        <div class="card-row">
+                            <b>${o['Ник Instagram'] || '—'}</b>
+                            <button class="pay-btn ${isPaid ? 'pay-done' : 'pay-wait'}" onclick="updateField('${o.ID}', 'payment', '${isPaid?'Нет':'Да'}')">
+                                ${isPaid ? '✅ Оплачен' : '⏳ Оплата'}
+                            </button>
                         </div>
-                        <div style="font-size:13px; color:var(--secondary);">${o['Тип изделия']} • ${o['Цена']} BYN</div>
+                        <div style="font-size:13px; color:var(--secondary); margin-bottom:10px;">${o['Тип изделия']} • ${o['Цена']} BYN</div>
+                        <div class="card-row" style="border-top:1px solid #f2f2f7; padding-top:10px;">
+                            <span style="font-size:11px; color:gray;">Статус:</span>
+                            <select class="status-select" onchange="updateField('${o.ID}', 'status', this.value)">
+                                <option value="Новый" ${o.Статус==='Новый'?'selected':''}>Новый</option>
+                                <option value="В работе" ${o.Статус==='В работе'?'selected':''}>В работе</option>
+                                <option value="Готов" ${o.Статус==='Готов'?'selected':''}>Готов</option>
+                                <option value="Отправлен" ${o.Статус==='Отправлен'?'selected':''}>Отправлен</option>
+                            </select>
+                        </div>
                     </div>`;
             });
-        } 
-        else if (currentTab === 'shipments') {
+        } else if (currentTab === 'shipments') {
             appData.shipments.slice().reverse().forEach(s => {
-                html += `
-                    <div class="card animate__animated animate__fadeIn">
-                        <div class="card-title"><span>${s['ФИО']}</span><span style="font-size:12px; color:var(--secondary)">${s['Стоимость']} BYN</span></div>
-                        <div style="font-size:13px;">📦 ${s['Тип доставки']} • ${s['Трек номер']}</div>
-                    </div>`;
-            });
-        }
-        else if (currentTab === 'shopping') {
-            appData.purchases.slice().reverse().forEach(p => {
-                html += `
-                    <div class="card animate__animated animate__fadeIn">
-                        <div class="card-title"><span>${p['Тип покупки']}</span><span style="color:var(--red)">-${p['Сумма']} BYN</span></div>
-                        <div style="font-size:12px; color:var(--secondary)">${p['Дата']}</div>
-                    </div>`;
-            });
-        }
-        else if (currentTab === 'stats') {
-            html = `
-                <div class="card animate__animated animate__fadeIn">
-                    <div style="margin-bottom:10px; display:flex; justify-content:space-between;"><span>Доход (чистый):</span> <b>${appData.stats.income} BYN</b></div>
-                    <div style="margin-bottom:10px; display:flex; justify-content:space-between;"><span>Затраты:</span> <b style="color:var(--red)">${appData.stats.totalPurchases} BYN</b></div>
-                    <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
-                    <div style="display:flex; justify-content:space-between; font-size:18px;"><b>ИТОГО:</b> <b style="color:var(--green)">${appData.stats.netProfit} BYN</b></div>
-                </div>
-                <div class="card animate__animated animate__fadeIn">
-                    <h4 style="margin-top:0">Популярность изделий</h4>
-                    <canvas id="typeChart" style="max-height:250px"></canvas>
+                html += `<div class="card animate__animated animate__fadeIn">
+                    <div class="card-row"><b>${s['ФИО']}</b><span style="font-size:12px; color:var(--accent)">${s['Тип доставки']}</span></div>
+                    <div style="font-size:13px;">🆔 ${s['Трек номер']}</div>
+                    <div style="font-size:11px; color:gray; margin-top:5px;">${s['Дата отправки']} • ${s['Стоимость']} BYN</div>
                 </div>`;
+            });
+        } else if (currentTab === 'shopping') {
+            appData.purchases.slice().reverse().forEach(p => {
+                html += `<div class="card animate__animated animate__fadeIn">
+                    <div class="card-row"><b>${p['Тип покупки']}</b><b style="color:var(--red)">-${p['Сумма']} BYN</b></div>
+                    <div style="font-size:11px; color:gray;">${p['Дата']}</div>
+                </div>`;
+            });
+        } else if (currentTab === 'stats') {
+            html = `<div class="card">
+                <div class="card-row"><span>Доход (чистый):</span><b>${appData.stats.income} BYN</b></div>
+                <div class="card-row"><span>Закупки:</span><b style="color:var(--red)">${appData.stats.totalPurchases} BYN</b></div>
+                <div class="card-row" style="border-top:1px solid #eee; padding-top:10px; margin-top:10px; font-size:18px;">
+                    <b>Итого:</b><b style="color:var(--green)">${appData.stats.netProfit} BYN</b>
+                </div>
+            </div>
+            <div class="card"><canvas id="typeChart"></canvas></div>`;
             cont.innerHTML = html;
             initChart(appData.stats.chartData);
             return;
         }
-
-        cont.innerHTML = html || '<div class="loader">Здесь пока пусто</div>';
+        cont.innerHTML = html || '<div style="text-align:center; padding:50px; color:gray;">Пусто</div>';
         lucide.createIcons();
     }
 
-    // 5. Диаграмма
+    async function updateField(id, field, val) {
+        if (window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+        const order = appData.orders.find(o => o.ID.toString() === id.toString());
+        if (order) { if(field==='status') order.Статус=val; else order['Оплата']=val; renderCurrentTab(); }
+        await fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateOrderField', id: id, field: field, value: val }) });
+        setTimeout(loadData, 1500);
+    }
+
     function initChart(data) {
-        const ctx = document.getElementById('typeChart').getContext('2d');
-        new Chart(ctx, {
+        new Chart(document.getElementById('typeChart'), {
             type: 'doughnut',
-            data: {
-                labels: Object.keys(data),
-                datasets: [{
-                    data: Object.values(data),
-                    backgroundColor: ['#5856d6', '#34c759', '#ff9500', '#ff3b30', '#af52de', '#5ac8fa']
-                }]
-            },
-            options: { 
-                cutout: '70%',
-                plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } } 
-            }
+            data: { labels: Object.keys(data), datasets: [{ data: Object.values(data), backgroundColor: ['#5856d6', '#34c759', '#ff9500', '#ff3b30', '#af52de'] }] },
+            options: { plugins: { legend: { position: 'bottom' } } }
         });
     }
 
-    // 6. Модалки
     function openModal() {
         document.getElementById('overlay').classList.add('active');
         const mId = currentTab === 'orders' ? 'orderModal' : (currentTab === 'shipments' ? 'shipModal' : 'purchaseModal');
+        if(currentTab === 'shipments') document.getElementById('shipDate').valueAsDate = new Date();
         document.getElementById(mId).classList.add('active');
     }
 
-    function closeModals() {
-        document.querySelectorAll('.modal-sheet, .overlay').forEach(el => el.classList.remove('active'));
-    }
+    function closeModals() { document.querySelectorAll('.modal-sheet, .overlay').forEach(el => el.classList.remove('active')); }
 
-    // 7. Сохранение
     async function saveOrder() {
-        const data = {
-            action: 'addOrder',
-            nick: document.getElementById('ordNick').value,
-            item: document.getElementById('ordItem').value,
-            price: document.getElementById('ordPrice').value,
-            comment: document.getElementById('ordComm').value
-        };
-        await sendData(data);
-    }
-
-    async function savePurchase() {
-        const data = {
-            action: 'addPurchase',
-            date: new Date().toLocaleDateString('ru-RU'),
-            type: document.getElementById('purType').value,
-            amount: document.getElementById('purAmount').value
-        };
-        await sendData(data);
+        const d = { action: 'addOrder', nick: document.getElementById('ordNick').value, item: document.getElementById('ordItem').value, price: document.getElementById('ordPrice').value, comment: document.getElementById('ordComm').value };
+        await sendRequest(d);
     }
 
     async function saveShipment() {
-        const data = {
-            action: 'addShipment',
-            date: new Date().toLocaleDateString('ru-RU'),
-            fio: document.getElementById('shipFio').value,
-            track: document.getElementById('shipTrack').value,
-            cost: document.getElementById('shipCost').value,
-            type: 'Стандарт', address: '—', cod: 'Нет' // Упрощено для скорости
-        };
-        await sendData(data);
+        const d = { action: 'addShipment', date: new Date(document.getElementById('shipDate').value).toLocaleDateString('ru-RU'), fio: document.getElementById('shipFio').value, type: document.getElementById('shipType').value, track: document.getElementById('shipTrack').value, cost: document.getElementById('shipCost').value };
+        await sendRequest(d);
     }
 
-    async function sendData(data) {
-        if (window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+    async function savePurchase() {
+        const d = { action: 'addPurchase', date: new Date().toLocaleDateString('ru-RU'), type: document.getElementById('purType').value, amount: document.getElementById('purAmount').value };
+        await sendRequest(d);
+    }
+
+    async function sendRequest(data) {
         closeModals();
         await fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
-        setTimeout(loadData, 1000); // Обновляем данные через секунду
+        setTimeout(loadData, 1000);
     }
 
     init();

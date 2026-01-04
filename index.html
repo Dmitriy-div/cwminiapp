@@ -58,7 +58,7 @@
     </div>
 
 <script>
-    const SHEET_URL = "https://script.google.com/macros/s/AKfycbwnJQLSYIj8rXI6cK-AhggRlGPXH59w-_9X-J0QZP9tHdvrhWwDnnQ0Iw6f31RPrg9t/exec";
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbxwmv4sH_qurUnLDhmHHv1AaDZfysLYRTdhkj7uBIqRreO1Ousnp6m3If8uO0jH7MJb/exec";
     let currentTab = 'orders';
 
     async function switchTab(tab, el) {
@@ -73,15 +73,23 @@
         cont.innerHTML = '<div style="text-align:center; padding:40px; color:gray;">Загрузка...</div>';
         
         try {
-            const action = currentTab === 'orders' ? '?action=getOrders' : (currentTab === 'budget' ? '' : '?action=getShopping');
+            const action = currentTab === 'orders' ? '?action=getOrders' : (currentTab === 'budget' ? '?action=getBudget' : '?action=getShopping');
             const res = await fetch(SHEET_URL + action);
             const data = await res.json();
             
-            if (currentTab === 'orders') renderOrders(data);
-            else if (currentTab === 'budget') renderBudget(data);
-            else if (currentTab === 'shopping') renderShopping(data);
+            if (currentTab === 'orders') {
+                renderOrders(data);
+            } else if (currentTab === 'budget') {
+                renderBudget(data);
+                if (data.totalIncome !== undefined) {
+                    document.getElementById('totalBalance').textContent = (data.totalIncome - data.totalExpense).toFixed(2);
+                }
+            } else if (currentTab === 'shopping') {
+                cont.innerHTML = '<div style="text-align:center; padding:40px; color:gray;">Раздел закупки в разработке</div>';
+            }
         } catch (e) { 
-            cont.innerHTML = '<div style="padding:20px; color:red; text-align:center;">Ошибка соединения</div>'; 
+            console.error(e);
+            cont.innerHTML = '<div style="padding:20px; color:red; text-align:center;">Ошибка соединения<br><small style="color:gray">Проверьте права доступа в Google Script</small></div>'; 
         }
         lucide.createIcons();
     }
@@ -93,15 +101,15 @@
             html += `
                 <div class="card animate__animated animate__fadeIn">
                     <div style="display:flex; justify-content:space-between;">
-                        <b>${o['Ник Instagram']}</b>
-                        <span class="status-badge" style="background:${colors[o.Статус]}20; color:${colors[o.Статус]}">${o.Статус}</span>
+                        <b>${o['Ник Instagram'] || '—'}</b>
+                        <span class="status-badge" style="background:${colors[o.Статус] || '#8e8e93'}20; color:${colors[o.Статус] || '#8e8e93'}">${o.Статус || 'Новый'}</span>
                     </div>
                     <div style="font-size:13px; color:gray; margin:5px 0;">${o['Тип изделия']} • ${o.Дата}</div>
                     <div style="font-size:14px;">${o.Комментарий || ''}</div>
                     <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-weight:bold;">${o.Цена} BYN</span>
                         <select onchange="updateStatus('${o.ID}', this.value)" style="border:none; background:#f2f2f7; padding:5px; border-radius:5px; font-size:12px;">
-                            <option value="" disabled selected>Изменить статус</option>
+                            <option value="" disabled selected>Изменить</option>
                             <option value="В работе">В работе</option>
                             <option value="Готов">Готов</option>
                             <option value="Отправлен">Отправлен</option>
@@ -115,10 +123,20 @@
     async function updateStatus(id, newStatus) {
         await fetch(SHEET_URL, {
             method: 'POST',
-            mode: 'no-cors',
             body: JSON.stringify({ action: 'updateOrderStatus', id: id, status: newStatus })
         });
         setTimeout(loadData, 500);
+    }
+
+    function renderBudget(data) {
+        let html = '<div class="card animate__animated animate__fadeIn"><h3>История финансов</h3>';
+        data.operations.slice().reverse().forEach(op => {
+            html += `<div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:0.5px solid #eee;">
+                <div><b>${op.category}</b><div style="font-size:11px; color:var(--secondary);">${op.date}</div></div>
+                <div style="color:${op.type==='income'?'var(--green)':'var(--red)'}; font-weight:bold;">${op.type==='income'?'+':'-'}${op.amount}</div>
+            </div>`;
+        });
+        document.getElementById('app-content').innerHTML = html + '</div>';
     }
 
     function openOrderModal() {
@@ -142,8 +160,11 @@
         if(!data.nick || !data.price) return alert('Заполните данные');
         
         closeModals();
-        await fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
-        loadData();
+        await fetch(SHEET_URL, { 
+            method: 'POST', 
+            body: JSON.stringify(data)
+        });
+        setTimeout(loadData, 500);
     }
 
     function init() {
@@ -154,4 +175,3 @@
 </script>
 </body>
 </html>
-

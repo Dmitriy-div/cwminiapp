@@ -5,40 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CW Workshop Manager</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        :root { --bg: #f8f9fb; --accent: #5856d6; --card: #ffffff; --text: #1c1c1e; --secondary: #8e8e93; --green: #34c759; --red: #ff3b30; --radius: 20px; }
-        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 100px; overflow-x: hidden; }
-        .balance-header { background: #1c1c1e; color: white; margin: 15px; padding: 25px; border-radius: var(--radius); text-align: center; }
-        .card { background: var(--card); margin: 12px; padding: 18px; border-radius: var(--radius); box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; }
+        :root { --bg: #f8f9fb; --accent: #5856d6; --card: #ffffff; --text: #1c1c1e; --secondary: #8e8e93; --radius: 20px; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 100px; }
+        .balance-header { background: #1c1c1e; color: white; margin: 15px; padding: 20px; border-radius: var(--radius); text-align: center; }
+        .card { background: var(--card); margin: 12px; padding: 18px; border-radius: var(--radius); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .nav-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; padding: 10px 0 25px; border-top: 0.5px solid #eee; z-index: 1000; }
         .nav-item { flex: 1; text-align: center; color: var(--secondary); font-size: 10px; cursor: pointer; }
         .nav-item.active { color: var(--accent); }
-        .status-badge { padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: bold; }
-        .input-pill { width: 100%; background: #f2f2f7; border: none; padding: 14px; border-radius: 12px; margin-bottom: 10px; font-size: 15px; outline: none; }
+        .input-pill { width: 100%; background: #f2f2f7; border: none; padding: 12px; border-radius: 12px; margin-bottom: 10px; font-size: 15px; outline: none; box-sizing: border-box; }
         .add-btn { position: fixed; bottom: 85px; right: 20px; width: 56px; height: 56px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 15px rgba(88,86,214,0.4); z-index: 999; }
-        .modal-sheet { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-radius: 25px 25px 0 0; padding: 20px; transform: translateY(100%); transition: 0.3s ease; z-index: 2000; }
+        .modal-sheet { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-radius: 25px 25px 0 0; padding: 20px; transform: translateY(100%); transition: 0.3s ease; z-index: 2000; box-sizing: border-box; max-height: 90vh; overflow-y: auto; }
         .modal-sheet.active { transform: translateY(0); }
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: 0.3s; z-index: 1999; }
         .overlay.active { opacity: 1; pointer-events: auto; }
+        .ship-badge { font-size: 10px; padding: 2px 8px; border-radius: 5px; background: #eee; }
     </style>
 </head>
 <body>
 
     <div class="balance-header">
-        <div style="font-size: 12px; opacity: 0.6; margin-bottom: 5px;">Прибыль мастерской</div>
-        <div style="font-size: 28px; font-weight: 800;"><span id="totalBalance">0.00</span> BYN</div>
+        <div id="header-title" style="font-size: 14px; opacity: 0.8;">Управление мастерской</div>
+        <div id="header-subtitle" style="font-size: 20px; font-weight: bold; margin-top:5px;">CW Workshop</div>
     </div>
 
     <div id="app-content"></div>
 
-    <div class="add-btn" onclick="openOrderModal()"><i data-lucide="plus"></i></div>
+    <div class="add-btn" onclick="openModal()"><i data-lucide="plus"></i></div>
 
     <nav class="nav-bar">
         <div class="nav-item active" onclick="switchTab('orders', this)"><i data-lucide="package"></i><div>Заказы</div></div>
-        <div class="nav-item" onclick="switchTab('budget', this)"><i data-lucide="bar-chart-3"></i><div>Финансы</div></div>
+        <div class="nav-item" onclick="switchTab('shipments', this)"><i data-lucide="truck"></i><div>Отправки</div></div>
         <div class="nav-item" onclick="switchTab('shopping', this)"><i data-lucide="shopping-cart"></i><div>Закупка</div></div>
     </nav>
 
@@ -53,16 +52,35 @@
             <option value="Магнит">🧲 Магнит</option>
         </select>
         <input type="number" id="ordPrice" class="input-pill" placeholder="Сумма (BYN)">
-        <textarea id="ordComm" class="input-pill" placeholder="Комментарий к заказу" rows="3"></textarea>
-        <button onclick="saveOrder()" style="width:100%; background:var(--accent); color:white; border:none; padding:15px; border-radius:12px; font-weight:bold;">Создать заказ</button>
+        <textarea id="ordComm" class="input-pill" placeholder="Комментарий" rows="2"></textarea>
+        <button onclick="saveOrder()" style="width:100%; background:var(--accent); color:white; border:none; padding:15px; border-radius:12px; font-weight:bold;">Создать</button>
+    </div>
+
+    <div id="shipModal" class="modal-sheet">
+        <h3 style="margin-top:0">Новое отправление</h3>
+        <input type="date" id="shipDate" class="input-pill">
+        <input type="text" id="shipFio" class="input-pill" placeholder="ФИО получателя">
+        <input type="text" id="shipAddress" class="input-pill" placeholder="Адрес (пункт выдачи)">
+        <select id="shipType" class="input-pill">
+            <option value="Европочта">📦 Европочта</option>
+            <option value="Белпочта">📮 Белпочта</option>
+            <option value="СДЭК">🚚 СДЭК</option>
+            <option value="Другое">🌐 Другое</option>
+        </select>
+        <input type="text" id="shipTrack" class="input-pill" placeholder="Трек-номер">
+        <select id="shipCod" class="input-pill">
+            <option value="Нет">Без наложенного</option>
+            <option value="Да">Наложенный платеж</option>
+        </select>
+        <input type="number" id="shipCost" class="input-pill" placeholder="Стоимость доставки (BYN)">
+        <button onclick="saveShipment()" style="width:100%; background:var(--accent); color:white; border:none; padding:15px; border-radius:12px; font-weight:bold;">Записать отправку</button>
     </div>
 
 <script>
-    // ЗАМЕНИТЕ ЭТУ ССЫЛКУ НА ВАШУ ПОСЛЕ ПУБЛИКАЦИИ СКРИПТА
-    const SHEET_URL = "https://script.google.com/macros/s/AKfycbyw6qOI2iTNM5BxoiU6lTzJqTMabtcHAsxPNbalcbTZ-ssWsH1n-8Loa7hruLRmFySA/exec";
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbwi4H9OqkVec60kep48SmKFuDqoDWJAWiEJWbQ1wlRolZpXqjLK-3xQjrXF5tej5FBB/exec";
     let currentTab = 'orders';
 
-    async function switchTab(tab, el) {
+    function switchTab(tab, el) {
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         el.classList.add('active');
         currentTab = tab;
@@ -72,93 +90,63 @@
     async function loadData() {
         const cont = document.getElementById('app-content');
         cont.innerHTML = '<div style="text-align:center; padding:40px; color:gray;">Загрузка...</div>';
-        
         try {
-            const action = currentTab === 'orders' ? '?action=getOrders' : (currentTab === 'budget' ? '?action=getBudget' : '?action=getShopping');
-            const res = await fetch(SHEET_URL + action);
+            const action = currentTab === 'orders' ? 'getOrders' : (currentTab === 'shipments' ? 'getShipments' : 'getShopping');
+            const res = await fetch(`${SHEET_URL}?action=${action}`);
             const data = await res.json();
             
-            if (currentTab === 'orders') {
-                renderOrders(data);
-            } else if (currentTab === 'budget') {
-                renderBudget(data);
-                if (data.totalIncome !== undefined) {
-                    document.getElementById('totalBalance').textContent = (data.totalIncome - data.totalExpense).toFixed(2);
-                }
-            } else if (currentTab === 'shopping') {
-                cont.innerHTML = '<div style="text-align:center; padding:40px; color:gray;">Раздел закупки в разработке</div>';
-            }
-        } catch (e) { 
-            console.error(e);
-            cont.innerHTML = '<div style="padding:20px; color:red; text-align:center;">Ошибка соединения<br><small style="color:gray">Проверьте права доступа в Google Script (Anyone)</small></div>'; 
-        }
+            if (currentTab === 'orders') renderOrders(data);
+            else if (currentTab === 'shipments') renderShipments(data);
+            else cont.innerHTML = '<div style="text-align:center; padding:40px;">Раздел в разработке</div>';
+        } catch (e) { cont.innerHTML = '<div style="padding:20px; color:red; text-align:center;">Ошибка данных</div>'; }
         lucide.createIcons();
     }
 
     function renderOrders(data) {
         let html = '';
-        if (!data || data.length === 0) {
-            html = '<div style="text-align:center; margin-top:50px; color:gray;">Заказов пока нет</div>';
-        } else {
-            data.reverse().forEach(o => {
-                const colors = {'Новый':'#ff9500','В работе':'#007aff','Готов':'#34c759','Отправлен':'#8e8e93'};
-                html += `
-                    <div class="card animate__animated animate__fadeIn">
-                        <div style="display:flex; justify-content:space-between;">
-                            <b>${o['Ник Instagram'] || '—'}</b>
-                            <span class="status-badge" style="background:${colors[o.Статус] || '#8e8e93'}20; color:${colors[o.Статус] || '#8e8e93'}">${o.Статус || 'Новый'}</span>
-                        </div>
-                        <div style="font-size:13px; color:gray; margin:5px 0;">${o['Тип изделия'] || '—'} • ${o.Дата || ''}</div>
-                        <div style="font-size:14px;">${o.Комментарий || ''}</div>
-                        <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-weight:bold;">${o.Цена || 0} BYN</span>
-                            <select onchange="updateStatus('${o.ID}', this.value)" style="border:none; background:#f2f2f7; padding:5px; border-radius:5px; font-size:12px;">
-                                <option value="" disabled selected>Изменить</option>
-                                <option value="В работе">В работе</option>
-                                <option value="Готов">Готов</option>
-                                <option value="Отправлен">Отправлен</option>
-                            </select>
-                        </div>
-                    </div>`;
-            });
-        }
-        document.getElementById('app-content').innerHTML = html;
+        data.reverse().forEach(o => {
+            const colors = {'Новый':'#ff9500','В работе':'#007aff','Готов':'#34c759','Отправлен':'#8e8e93'};
+            html += `<div class="card animate__animated animate__fadeIn">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <b>${o['Ник Instagram'] || '—'}</b>
+                    <span style="color:${colors[o.Статус]}; font-size:12px; font-weight:bold;">${o.Статус}</span>
+                </div>
+                <div style="font-size:13px; color:gray;">${o['Тип изделия']} • ${o.Цена} BYN</div>
+            </div>`;
+        });
+        document.getElementById('app-content').innerHTML = html || '<div style="text-align:center; padding:40px;">Нет заказов</div>';
     }
 
-    async function updateStatus(id, newStatus) {
-        try {
-            await fetch(SHEET_URL, {
-                method: 'POST',
-                mode: 'no-cors', // Важно для Google Script POST
-                body: JSON.stringify({ action: 'updateOrderStatus', id: id, status: newStatus })
-            });
-            setTimeout(loadData, 800);
-        } catch(e) { alert("Ошибка обновления"); }
+    function renderShipments(data) {
+        let html = '';
+        data.reverse().forEach(s => {
+            html += `<div class="card animate__animated animate__fadeIn">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <b style="font-size:14px;">${s['ФИО']}</b>
+                    <span class="ship-badge">${s['Тип доставки']}</span>
+                </div>
+                <div style="font-size:13px; margin-bottom:4px;">📍 ${s['Адрес']}</div>
+                <div style="font-size:12px; color:gray;">🆔 ${s['Трек номер']} • 📅 ${s['Дата отправки']}</div>
+                <div style="margin-top:8px; font-size:13px; border-top:1px solid #f0f0f0; padding-top:8px; display:flex; justify-content:space-between;">
+                    <span>Наложенный: <b>${s['Наложенный платеж']}</b></span>
+                    <span>Стоимость: <b>${s['Стоимость']} BYN</b></span>
+                </div>
+            </div>`;
+        });
+        document.getElementById('app-content').innerHTML = html || '<div style="text-align:center; padding:40px;">Нет отправок</div>';
     }
 
-    function renderBudget(data) {
-        let html = '<div class="card animate__animated animate__fadeIn"><h3>История финансов</h3>';
-        if (data.operations && data.operations.length > 0) {
-            data.operations.slice().reverse().forEach(op => {
-                html += `<div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:0.5px solid #eee;">
-                    <div><b>${op.category || 'Прочее'}</b><div style="font-size:11px; color:var(--secondary);">${op.date}</div></div>
-                    <div style="color:${op.type==='income'?'var(--green)':'var(--red)'}; font-weight:bold;">${op.type==='income'?'+':'-'}${op.amount}</div>
-                </div>`;
-            });
-        } else {
-            html += '<p style="color:gray; text-align:center;">Операций нет</p>';
-        }
-        document.getElementById('app-content').innerHTML = html + '</div>';
-    }
-
-    function openOrderModal() {
+    function openModal() {
         document.getElementById('overlay').classList.add('active');
-        document.getElementById('orderModal').classList.add('active');
+        const modalId = currentTab === 'orders' ? 'orderModal' : 'shipModal';
+        document.getElementById(modalId).classList.add('active');
+        if(currentTab === 'shipments') document.getElementById('shipDate').valueAsDate = new Date();
     }
 
     function closeModals() {
         document.getElementById('overlay').classList.remove('active');
         document.getElementById('orderModal').classList.remove('active');
+        document.getElementById('shipModal').classList.remove('active');
     }
 
     async function saveOrder() {
@@ -169,27 +157,32 @@
             price: document.getElementById('ordPrice').value,
             comment: document.getElementById('ordComm').value
         };
-        if(!data.nick || !data.price) return alert('Заполните данные');
-        
-        closeModals();
-        try {
-            await fetch(SHEET_URL, { 
-                method: 'POST', 
-                mode: 'no-cors',
-                body: JSON.stringify(data)
-            });
-            setTimeout(loadData, 800);
-        } catch(e) { alert("Ошибка сохранения"); }
+        await sendData(data);
     }
 
-    function init() {
-        if (window.Telegram && window.Telegram.WebApp) {
-            window.Telegram.WebApp.expand();
-        }
-        loadData();
+    async function saveShipment() {
+        const data = {
+            action: 'addShipment',
+            date: new Date(document.getElementById('shipDate').value).toLocaleDateString('ru-RU'),
+            fio: document.getElementById('shipFio').value,
+            address: document.getElementById('shipAddress').value,
+            type: document.getElementById('shipType').value,
+            track: document.getElementById('shipTrack').value,
+            cod: document.getElementById('shipCod').value,
+            cost: document.getElementById('shipCost').value
+        };
+        if(!data.fio || !data.track) return alert("Заполните ФИО и Трек");
+        await sendData(data);
     }
-    init();
+
+    async function sendData(data) {
+        closeModals();
+        await fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
+        setTimeout(loadData, 800);
+    }
+
+    window.Telegram.WebApp.expand();
+    loadData();
 </script>
 </body>
 </html>
-

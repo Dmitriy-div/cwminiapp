@@ -14,10 +14,10 @@
         .balance-header { background: #1c1c1e; color: white; margin: 15px; padding: 25px; border-radius: var(--radius); text-align: center; }
         .card { background: var(--card); margin: 12px; padding: 18px; border-radius: var(--radius); box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; }
         .nav-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; padding: 10px 0 25px; border-top: 0.5px solid #eee; z-index: 1000; }
-        .nav-item { flex: 1; text-align: center; color: var(--secondary); font-size: 10px; }
+        .nav-item { flex: 1; text-align: center; color: var(--secondary); font-size: 10px; cursor: pointer; }
         .nav-item.active { color: var(--accent); }
         .status-badge { padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: bold; }
-        .input-pill { width: 100%; background: #f2f2f7; border: none; padding: 14px; border-radius: 12px; margin-bottom: 10px; font-size: 15px; }
+        .input-pill { width: 100%; background: #f2f2f7; border: none; padding: 14px; border-radius: 12px; margin-bottom: 10px; font-size: 15px; outline: none; }
         .add-btn { position: fixed; bottom: 85px; right: 20px; width: 56px; height: 56px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 15px rgba(88,86,214,0.4); z-index: 999; }
         .modal-sheet { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-radius: 25px 25px 0 0; padding: 20px; transform: translateY(100%); transition: 0.3s ease; z-index: 2000; }
         .modal-sheet.active { transform: translateY(0); }
@@ -58,7 +58,8 @@
     </div>
 
 <script>
-    const SHEET_URL = "https://script.google.com/macros/s/AKfycbxwmv4sH_qurUnLDhmHHv1AaDZfysLYRTdhkj7uBIqRreO1Ousnp6m3If8uO0jH7MJb/exec";
+    // ЗАМЕНИТЕ ЭТУ ССЫЛКУ НА ВАШУ ПОСЛЕ ПУБЛИКАЦИИ СКРИПТА
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbxaYTLAD5Qc5gSToWvnE7T897yKInH-oICcQSCFbbHjyp581ZShbf-g5HNRKr2dN4Iv/exec";
     let currentTab = 'orders';
 
     async function switchTab(tab, el) {
@@ -89,53 +90,64 @@
             }
         } catch (e) { 
             console.error(e);
-            cont.innerHTML = '<div style="padding:20px; color:red; text-align:center;">Ошибка соединения<br><small style="color:gray">Проверьте права доступа в Google Script</small></div>'; 
+            cont.innerHTML = '<div style="padding:20px; color:red; text-align:center;">Ошибка соединения<br><small style="color:gray">Проверьте права доступа в Google Script (Anyone)</small></div>'; 
         }
         lucide.createIcons();
     }
 
     function renderOrders(data) {
         let html = '';
-        data.reverse().forEach(o => {
-            const colors = {'Новый':'#ff9500','В работе':'#007aff','Готов':'#34c759','Отправлен':'#8e8e93'};
-            html += `
-                <div class="card animate__animated animate__fadeIn">
-                    <div style="display:flex; justify-content:space-between;">
-                        <b>${o['Ник Instagram'] || '—'}</b>
-                        <span class="status-badge" style="background:${colors[o.Статус] || '#8e8e93'}20; color:${colors[o.Статус] || '#8e8e93'}">${o.Статус || 'Новый'}</span>
-                    </div>
-                    <div style="font-size:13px; color:gray; margin:5px 0;">${o['Тип изделия']} • ${o.Дата}</div>
-                    <div style="font-size:14px;">${o.Комментарий || ''}</div>
-                    <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-weight:bold;">${o.Цена} BYN</span>
-                        <select onchange="updateStatus('${o.ID}', this.value)" style="border:none; background:#f2f2f7; padding:5px; border-radius:5px; font-size:12px;">
-                            <option value="" disabled selected>Изменить</option>
-                            <option value="В работе">В работе</option>
-                            <option value="Готов">Готов</option>
-                            <option value="Отправлен">Отправлен</option>
-                        </select>
-                    </div>
-                </div>`;
-        });
-        document.getElementById('app-content').innerHTML = html || '<div style="text-align:center; margin-top:50px;">Заказов пока нет</div>';
+        if (!data || data.length === 0) {
+            html = '<div style="text-align:center; margin-top:50px; color:gray;">Заказов пока нет</div>';
+        } else {
+            data.reverse().forEach(o => {
+                const colors = {'Новый':'#ff9500','В работе':'#007aff','Готов':'#34c759','Отправлен':'#8e8e93'};
+                html += `
+                    <div class="card animate__animated animate__fadeIn">
+                        <div style="display:flex; justify-content:space-between;">
+                            <b>${o['Ник Instagram'] || '—'}</b>
+                            <span class="status-badge" style="background:${colors[o.Статус] || '#8e8e93'}20; color:${colors[o.Статус] || '#8e8e93'}">${o.Статус || 'Новый'}</span>
+                        </div>
+                        <div style="font-size:13px; color:gray; margin:5px 0;">${o['Тип изделия'] || '—'} • ${o.Дата || ''}</div>
+                        <div style="font-size:14px;">${o.Комментарий || ''}</div>
+                        <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:bold;">${o.Цена || 0} BYN</span>
+                            <select onchange="updateStatus('${o.ID}', this.value)" style="border:none; background:#f2f2f7; padding:5px; border-radius:5px; font-size:12px;">
+                                <option value="" disabled selected>Изменить</option>
+                                <option value="В работе">В работе</option>
+                                <option value="Готов">Готов</option>
+                                <option value="Отправлен">Отправлен</option>
+                            </select>
+                        </div>
+                    </div>`;
+            });
+        }
+        document.getElementById('app-content').innerHTML = html;
     }
 
     async function updateStatus(id, newStatus) {
-        await fetch(SHEET_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'updateOrderStatus', id: id, status: newStatus })
-        });
-        setTimeout(loadData, 500);
+        try {
+            await fetch(SHEET_URL, {
+                method: 'POST',
+                mode: 'no-cors', // Важно для Google Script POST
+                body: JSON.stringify({ action: 'updateOrderStatus', id: id, status: newStatus })
+            });
+            setTimeout(loadData, 800);
+        } catch(e) { alert("Ошибка обновления"); }
     }
 
     function renderBudget(data) {
         let html = '<div class="card animate__animated animate__fadeIn"><h3>История финансов</h3>';
-        data.operations.slice().reverse().forEach(op => {
-            html += `<div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:0.5px solid #eee;">
-                <div><b>${op.category}</b><div style="font-size:11px; color:var(--secondary);">${op.date}</div></div>
-                <div style="color:${op.type==='income'?'var(--green)':'var(--red)'}; font-weight:bold;">${op.type==='income'?'+':'-'}${op.amount}</div>
-            </div>`;
-        });
+        if (data.operations && data.operations.length > 0) {
+            data.operations.slice().reverse().forEach(op => {
+                html += `<div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:0.5px solid #eee;">
+                    <div><b>${op.category || 'Прочее'}</b><div style="font-size:11px; color:var(--secondary);">${op.date}</div></div>
+                    <div style="color:${op.type==='income'?'var(--green)':'var(--red)'}; font-weight:bold;">${op.type==='income'?'+':'-'}${op.amount}</div>
+                </div>`;
+            });
+        } else {
+            html += '<p style="color:gray; text-align:center;">Операций нет</p>';
+        }
         document.getElementById('app-content').innerHTML = html + '</div>';
     }
 
@@ -160,15 +172,20 @@
         if(!data.nick || !data.price) return alert('Заполните данные');
         
         closeModals();
-        await fetch(SHEET_URL, { 
-            method: 'POST', 
-            body: JSON.stringify(data)
-        });
-        setTimeout(loadData, 500);
+        try {
+            await fetch(SHEET_URL, { 
+                method: 'POST', 
+                mode: 'no-cors',
+                body: JSON.stringify(data)
+            });
+            setTimeout(loadData, 800);
+        } catch(e) { alert("Ошибка сохранения"); }
     }
 
     function init() {
-        window.Telegram.WebApp.expand();
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.expand();
+        }
         loadData();
     }
     init();

@@ -3,407 +3,484 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CW Master CRM Pro</title>
+    <title>CRM Dashboard</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
-            --bg-color: var(--tg-theme-bg-color, #f2f2f7);
-            --text-color: var(--tg-theme-text-color, #1c1c1e);
-            --hint-color: var(--tg-theme-hint-color, #8e8e93);
-            --card-bg: var(--tg-theme-secondary-bg-color, #ffffff);
-            --accent: var(--tg-theme-button-color, #5856d6);
-            --danger: #ff3b30;
-            --warning: #ff9500;
-            --success: #34c759;
-            --radius: 20px;
+            /* Базовые переменные (Светлая тема по умолчанию) */
+            --bg: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text-primary: #000000;
+            --text-secondary: #8E8E93;
+            --accent: #007AFF;
+            --danger: #FF3B30;
+            --separator: #E5E5EA;
+            --radius: 16px;
+            --safe-top: env(safe-area-inset-top, 20px);
+            --safe-bottom: env(safe-area-inset-bottom, 20px);
         }
 
-        body { 
-            font-family: -apple-system, sans-serif; 
-            background: var(--bg-color); 
-            color: var(--text-color); 
-            margin: 0; 
-            padding-bottom: 120px;
-            /* Важный отступ для защиты от кнопок Telegram */
-            padding-top: var(--tg-viewport-safe-area-inset-top, 20px); 
+        /* Темная тема (автоматически от Телеграм) */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #000000;
+                --card-bg: #1C1C1E;
+                --text-primary: #FFFFFF;
+                --separator: #38383A;
+            }
         }
-        
-        /* Header & Stats */
-        .header { 
-            background: var(--card-bg); 
-            /* Увеличенный отступ сверху, чтобы контент спустился ниже кнопок TG */
-            padding: 40px 20px 20px; 
-            border-radius: 0 0 25px 25px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-            text-align: center;
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            padding-bottom: calc(90px + var(--safe-bottom));
+            -webkit-tap-highlight-color: transparent;
+            transition: background-color 0.3s;
         }
-        
-        .month-select-wrapper {
-            display: inline-block;
-            background: var(--bg-color);
-            padding: 5px 15px;
-            border-radius: 15px;
+
+        /* --- HEADER & FILTERS --- */
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--bg); /* Подстраивается под тему */
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding-top: calc(var(--safe-top) + 10px);
+            padding-bottom: 10px;
+            border-bottom: 0.5px solid var(--separator);
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
             margin-bottom: 10px;
         }
 
-        #monthSelect {
-            border: none;
-            background: transparent;
-            font-weight: bold;
-            color: var(--text-color);
-            font-size: 14px;
-            outline: none;
-        }
-
-        .balance-val { 
-            font-size: 36px; 
-            font-weight: 800; 
+        .date-filter-btn {
+            background: rgba(118, 118, 128, 0.12);
             color: var(--accent);
-            margin-top: 5px;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
         }
-        
-        .urgent-badge {
-            background: var(--danger);
-            color: white;
-            padding: 4px 10px;
+
+        /* Status Indicator inside header */
+        .sync-status {
+            font-size: 11px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .balance-container { text-align: center; padding: 10px 0 20px; }
+        .balance-label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+        .balance-amount { font-size: 34px; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; margin-top: 4px; }
+
+        .search-container { padding: 0 16px 12px; position: relative; }
+        .search-input {
+            width: 100%;
+            background: rgba(118, 118, 128, 0.12);
+            border: none;
+            padding: 10px 36px 10px 16px;
             border-radius: 10px;
-            font-size: 12px;
-            font-weight: bold;
-            display: inline-block;
-            margin-bottom: 10px;
+            font-size: 17px;
+            box-sizing: border-box;
+            outline: none;
+            color: var(--text-primary);
         }
 
-        /* Search & Sort Bar */
-        .search-container { padding: 15px 20px 5px; display: flex; gap: 10px; }
-        .search-input { flex: 1; background: var(--card-bg); border: none; padding: 12px 15px; border-radius: 12px; color: var(--text-color); font-size: 14px; outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .sort-btn { background: var(--card-bg); border: none; padding: 10px; border-radius: 12px; color: var(--hint-color); display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .filter-scroll {
+            display: flex;
+            gap: 8px;
+            padding: 0 16px 12px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .chip {
+            padding: 6px 14px;
+            background: var(--card-bg);
+            border-radius: 18px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border: 1px solid transparent;
+        }
+        .chip.active {
+            background: var(--text-primary);
+            color: var(--card-bg); /* Inverted for contrast */
+        }
 
-        /* Order Cards */
-        .card { background: var(--card-bg); margin: 0 20px 12px; padding: 16px; border-radius: var(--radius); position: relative; border-left: 5px solid transparent; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .card.urgent { border-left-color: var(--danger); background: #fff5f5; }
-        .card.upcoming { border-left-color: var(--warning); }
+        /* --- CARDS --- */
+        .list-container { padding: 0 16px; }
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            position: relative;
+            transition: transform 0.1s active;
+        }
+        .card:active { transform: scale(0.98); }
         
-        .card-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-        .nick { font-weight: 700; font-size: 16px; }
-        .price { font-weight: 700; color: var(--accent); }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+        .card-title { font-size: 17px; font-weight: 600; }
+        .card-price { font-size: 17px; font-weight: 600; color: var(--accent); }
+        .card-subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 8px; }
+        .card-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--separator); padding-top: 10px; margin-top: 10px; }
         
-        /* Client List Styles */
-        .client-row { display: flex; align-items: center; padding: 15px; background: var(--card-bg); margin: 0 20px 8px; border-radius: 15px; gap: 15px; }
-        .client-avatar { width: 45px; height: 45px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; }
-        .client-info { flex: 1; }
-        .client-stats { font-size: 12px; color: var(--hint-color); }
+        .status-badge { font-size: 12px; padding: 4px 8px; border-radius: 6px; font-weight: 600; }
+        .status-badge.new { background: rgba(0, 122, 255, 0.15); color: #007AFF; }
+        .status-badge.work { background: rgba(255, 149, 0, 0.15); color: #FF9500; }
+        .status-badge.done { background: rgba(52, 199, 89, 0.15); color: #34C759; }
 
-        /* Navigation */
-        .nav-bar { position: fixed; bottom: 20px; left: 15px; right: 15px; background: var(--card-bg); height: 70px; border-radius: 25px; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.15); z-index: 1000; }
-        .nav-item { color: var(--hint-color); display: flex; flex-direction: column; align-items: center; font-size: 10px; gap: 4px; text-decoration: none; }
+        /* --- NAV & MODALS --- */
+        .nav-bar {
+            position: fixed; bottom: 0; width: 100%;
+            background: var(--card-bg); /* Opaque for native feel */
+            border-top: 0.5px solid var(--separator);
+            display: flex; justify-content: space-around;
+            padding-bottom: var(--safe-bottom); padding-top: 10px; z-index: 1000;
+        }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-secondary); font-size: 10px; border: none; background: none; }
         .nav-item.active { color: var(--accent); }
+        
+        .fab {
+            position: fixed; bottom: calc(70px + var(--safe-bottom)); right: 20px;
+            width: 56px; height: 56px; border-radius: 28px; background: var(--accent); color: white;
+            box-shadow: 0 4px 15px rgba(0, 122, 255, 0.4); display: flex; align-items: center; justify-content: center; z-index: 999; border: none;
+        }
 
-        .fab { position: fixed; bottom: 105px; right: 20px; width: 56px; height: 56px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 15px rgba(0,0,0,0.2); border: none; z-index: 999; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 2000; opacity: 0; pointer-events: none; transition: 0.3s; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .sheet {
+            position: fixed; bottom: 0; left: 0; width: 100%; background: var(--card-bg);
+            border-radius: 24px 24px 0 0; padding: 24px 20px calc(24px + var(--safe-bottom)); box-sizing: border-box;
+            transform: translateY(100%); transition: 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); z-index: 2001; max-height: 90vh; overflow-y: auto;
+        }
+        .sheet.active { transform: translateY(0); }
         
-        /* Modals */
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; z-index: 2000; align-items: flex-end; }
-        .modal.active { display: flex; }
-        .modal-content { background: var(--bg-color); width: 100%; padding: 25px; border-radius: 25px 25px 0 0; max-height: 85vh; overflow-y: auto; }
+        .input-group { margin-bottom: 16px; }
+        .input-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; display: block; }
+        .input-field { width: 100%; padding: 14px; background: rgba(118, 118, 128, 0.12); border: none; border-radius: 12px; font-size: 16px; outline: none; box-sizing: border-box; color: var(--text-primary); }
         
-        .input { width: 100%; padding: 15px; margin-bottom: 12px; border-radius: 12px; border: 1px solid #ddd; box-sizing: border-box; font-size: 16px; }
-        .btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; cursor: pointer; }
-        .btn-main { background: var(--accent); color: white; }
+        .btn-primary { width: 100%; padding: 16px; background: var(--accent); color: white; border: none; border-radius: 14px; font-size: 17px; font-weight: 600; margin-top: 10px; }
+        
+        /* Skeleton */
+        .skeleton { background: rgba(118, 118, 128, 0.12); border-radius: 8px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+        .month-select { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <div id="urgentCounter" class="urgent-badge" style="display:none;">🔥 0 ГОРЯТ</div>
-        
-        <div class="month-select-wrapper">
-            <select id="monthSelect" onchange="renderCurrentTab()"></select>
+    <div class="sticky-header">
+        <div class="top-bar">
+            <div style="position: relative;">
+                <button class="date-filter-btn">
+                    <span id="currentMonthLabel">Все время</span>
+                    <i data-lucide="chevron-down" style="width: 16px;"></i>
+                </button>
+                <select id="monthSelect" class="month-select" onchange="handleMonthChange(this.value)"></select>
+            </div>
+            <div class="sync-status" id="syncStatus">
+                <i data-lucide="cloud" style="width:16px;"></i>
+            </div>
         </div>
-        
-        <div class="balance-val" id="totalProfit">0.00 BYN</div>
+
+        <div class="balance-container">
+            <div class="balance-label">Прибыль <span id="periodLabel"></span></div>
+            <div class="balance-amount"><span id="totalBalance">...</span> BYN</div>
+        </div>
+
+        <div class="search-container" id="searchBox">
+            <input type="text" class="search-input" placeholder="Поиск..." oninput="handleSearch(this.value)">
+            <i data-lucide="search" style="position: absolute; right: 28px; top: 10px; color: var(--text-secondary); width: 20px;"></i>
+        </div>
+
+        <div class="filter-scroll" id="statusFilterBar">
+            <div class="chip active" onclick="setFilter('Все', this)">Все</div>
+            <div class="chip" onclick="setFilter('Новый', this)">Новые</div>
+            <div class="chip" onclick="setFilter('В работе', this)">В работе</div>
+            <div class="chip" onclick="setFilter('Готов', this)">Готовы</div>
+        </div>
     </div>
 
-    <div id="searchBar" class="search-container">
-        <input type="text" id="searchInput" class="search-input" placeholder="Поиск..." oninput="renderOrders()">
-        <button class="sort-btn" onclick="toggleSort()"><i data-lucide="arrow-up-down" size="20"></i></button>
+    <div id="app-content" class="list-container">
+        <div class="card skeleton" style="height: 80px;"></div>
+        <div class="card skeleton" style="height: 80px;"></div>
     </div>
 
-    <div id="mainContent" style="padding-top: 10px;"></div>
-
-    <button class="fab" onclick="openOrderModal()"><i data-lucide="plus"></i></button>
+    <button class="fab" id="mainAddBtn" onclick="openModal()"><i data-lucide="plus"></i></button>
 
     <nav class="nav-bar">
-        <div class="nav-item active" onclick="switchTab('orders', this)"><i data-lucide="shopping-cart"></i><span>Заказы</span></div>
-        <div class="nav-item" onclick="switchTab('clients', this)"><i data-lucide="users"></i><span>Клиенты</span></div>
-        <div class="nav-item" onclick="switchTab('stats', this)"><i data-lucide="bar-chart-3"></i><span>Анализ</span></div>
+        <button class="nav-item active" onclick="switchTab('orders', this)"><i data-lucide="shopping-bag"></i><span>Заказы</span></button>
+        <button class="nav-item" onclick="switchTab('shipments', this)"><i data-lucide="truck"></i><span>Отправки</span></button>
+        <button class="nav-item" onclick="switchTab('shopping', this)"><i data-lucide="credit-card"></i><span>Расходы</span></button>
+        <button class="nav-item" onclick="switchTab('stats', this)"><i data-lucide="pie-chart"></i><span>Анализ</span></button>
     </nav>
 
-    <div id="orderModal" class="modal" onclick="if(event.target==this) closeModals()">
-        <div class="modal-content">
-            <h3 id="modalTitle">Новый заказ</h3>
-            <input type="hidden" id="orderId">
-            <input type="text" id="fNick" class="input" placeholder="Ник Instagram">
-            <input type="text" id="fItem" class="input" placeholder="Что заказывают?">
-            <input type="number" id="fPrice" class="input" placeholder="Цена BYN">
-            <label style="font-size:12px; color:gray; margin-left:5px;">Дедлайн</label>
-            <input type="date" id="fDate" class="input">
-            <select id="fStatus" class="input">
-                <option value="Новый">Новый</option>
-                <option value="В работе">В работе</option>
-                <option value="Готов">Готов</option>
-            </select>
-            <button class="btn btn-main" onclick="saveOrder()">Сохранить</button>
-            <button class="btn" style="color:var(--danger); margin-top:10px;" id="delBtn" onclick="deleteOrder()">Удалить заказ</button>
-        </div>
+    <div id="overlay" class="modal-overlay" onclick="closeModals()"></div>
+
+    <div id="orderModal" class="sheet">
+        <h2>Заказ</h2> <input type="hidden" id="editOrderId">
+        <div class="input-group"><label class="input-label">Ник</label><input type="text" id="ordNick" class="input-field"></div>
+        <div class="input-group"><label class="input-label">Тип</label><select id="ordItem" class="input-field"><option>Брошь</option><option>Брелок</option><option>Магнит</option></select></div>
+        <div class="input-group"><label class="input-label">Цена</label><input type="number" id="ordPrice" class="input-field"></div>
+        <div class="input-group"><label class="input-label">Дата</label><input type="date" id="ordDate" class="input-field"></div>
+        <div class="input-group"><label class="input-label">Дедлайн</label><input type="date" id="ordDeadline" class="input-field"></div>
+        <div class="input-group"><label class="input-label">Коммент</label><input type="text" id="ordComm" class="input-field"></div>
+        <button onclick="saveOrder()" class="btn-primary">Сохранить</button>
+        <button onclick="deleteEntry('Orders', document.getElementById('editOrderId').value)" class="btn-primary" style="background:#FF3B3020; color:#FF3B30; margin-top:10px;">Удалить</button>
+    </div>
+
+    <div id="shipModal" class="sheet">
+        <h2>Отправка</h2> <input type="hidden" id="editShipIndex">
+        <div class="input-group"><input type="date" id="shipDate" class="input-field"></div>
+        <div class="input-group"><input type="text" id="shipFio" class="input-field" placeholder="ФИО"></div>
+        <div class="input-group"><input type="text" id="shipTrack" class="input-field" placeholder="Трек"></div>
+        <div class="input-group"><input type="number" id="shipCost" class="input-field" placeholder="Стоимость"></div>
+        <button onclick="saveShipment()" class="btn-primary">Сохранить</button>
+        <button onclick="deleteEntry('Shipments', null, document.getElementById('editShipIndex').value)" class="btn-primary" style="background:#FF3B3020; color:#FF3B30; margin-top:10px;">Удалить</button>
+    </div>
+
+    <div id="purchaseModal" class="sheet">
+        <h2>Расход</h2> <input type="hidden" id="editPurIndex">
+        <div class="input-group"><input type="text" id="purType" class="input-field" placeholder="Тип"></div>
+        <div class="input-group"><input type="number" id="purAmount" class="input-field" placeholder="Сумма"></div>
+        <div class="input-group"><input type="date" id="purDate" class="input-field"></div>
+        <button onclick="savePurchase()" class="btn-primary">Сохранить</button>
+        <button onclick="deleteEntry('Purchases', null, document.getElementById('editPurIndex').value)" class="btn-primary" style="background:#FF3B3020; color:#FF3B30; margin-top:10px;">Удалить</button>
     </div>
 
 <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbwnTCjrsDu2sq8xq96yz5Yjqs7HiPD79BkdSMesDa4S_BbTfOg81yZzYsF8Ymg8NV0A/exec";
-    let appData = { orders: [], purchases: [], shipments: [] };
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbx8Mhd0cYd1QSgGXf0jZKolj1KwZembvj76TtOmiHo1ng5ssqfoh4-4vgt-Djjcy4dR/exec"; 
+    const CACHE_KEY = "crm_cache_v2"; // Ключ для LocalStorage
+    const tg = window.Telegram.WebApp;
+
+    let rawData = null;
     let currentTab = 'orders';
-    let sortByDeadline = false;
+    let currentStatusFilter = 'Все';
+    let currentDateFilter = 'all';
+    let searchQuery = '';
 
-    // Инициализация
-    window.onload = init;
+    // 1. Инициализация с кэшем
     function init() {
-        window.Telegram.WebApp.ready();
-        window.Telegram.WebApp.expand();
-        loadData();
-    }
-
-    async function loadData() {
-        try {
-            const res = await fetch(API_URL);
-            appData = await res.json();
-            
-            // Если селект пустой, заполняем месяцами
-            if(document.getElementById('monthSelect').innerHTML === "") {
-                initMonths();
-            }
-            renderCurrentTab();
-            lucide.createIcons();
-        } catch (e) {
-            console.error("Ошибка загрузки:", e);
-        }
-    }
-
-    // Собираем уникальные месяцы из заказов
-    function initMonths() {
-        const months = new Set();
-        appData.orders.forEach(o => {
-            if(o.Дата) months.add(o.Дата.substring(0, 7)); // YYYY-MM
-        });
+        tg.expand();
+        tg.setHeaderColor(getComputedStyle(document.body).getPropertyValue('--bg').trim());
+        tg.setBackgroundColor(getComputedStyle(document.body).getPropertyValue('--bg').trim());
         
-        // Сортировка: от новых к старым
-        const sortedMonths = [...months].sort().reverse();
-        
-        const sel = document.getElementById('monthSelect');
-        sel.innerHTML = '<option value="all">За все время</option>';
-        
-        sortedMonths.forEach(m => {
-            sel.innerHTML += `<option value="${m}">${m}</option>`;
-        });
-    }
-
-    function calculateBudget(month) {
-        let total = 0;
-        
-        // Считаем доходы (заказы)
-        appData.orders.forEach(o => {
-            // Фильтр по месяцу: если "all" или дата начинается с "YYYY-MM"
-            const matchMonth = month === 'all' || (o.Дата && o.Дата.startsWith(month));
-            
-            // Считаем, если подходит по месяцу. 
-            // Дополнительно можно проверять статус "Готов" или оплату, если нужно.
-            // Сейчас считает сумму всех созданных заказов в этом месяце.
-            if (matchMonth) {
-                total += parseFloat(o.Цена || 0);
-            }
-        });
-
-        // Обновляем цифру в шапке
-        document.getElementById('totalProfit').innerText = total.toFixed(2) + " BYN";
-    }
-
-    function renderCurrentTab() {
-        // Сразу пересчитываем бюджет при любой перерисовке
-        const selectedMonth = document.getElementById('monthSelect').value;
-        calculateBudget(selectedMonth);
-
-        const search = document.getElementById('searchBar');
-        search.style.display = (currentTab === 'orders') ? 'flex' : 'none';
-
-        if(currentTab === 'orders') renderOrders();
-        else if(currentTab === 'clients') renderClients();
-        else if(currentTab === 'stats') renderStats();
-    }
-
-    function renderOrders() {
-        const query = document.getElementById('searchInput').value.toLowerCase();
-        const month = document.getElementById('monthSelect').value;
-        
-        let filtered = appData.orders.filter(o => {
-            const matchSearch = o['Ник Instagram'].toLowerCase().includes(query) || o['Тип изделия'].toLowerCase().includes(query);
-            const matchMonth = month === 'all' || (o.Дата && o.Дата.startsWith(month));
-            return matchSearch && matchMonth;
-        });
-
-        // Сортировка
-        if(sortByDeadline) {
-            filtered.sort((a, b) => new Date(a.Дедлайн || '9999') - new Date(b.Дедлайн || '9999'));
+        // Попытка загрузить из кэша
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+            console.log("Loaded from cache");
+            rawData = JSON.parse(cached);
+            generateMonthOptions();
+            render(); 
+            updateSyncStatus('cached');
         } else {
-            filtered.reverse(); // Новые сверху
+            updateSyncStatus('loading');
         }
 
-        let html = '';
-        let urgentCount = 0;
-        const now = new Date();
-        now.setHours(0,0,0,0);
-
-        filtered.forEach(o => {
-            let deadlineClass = '';
-            // Проверка дедлайна только для не готовых заказов
-            if(o.Дедлайн && o.Статус !== 'Готов') {
-                const dDate = new Date(o.Дедлайн);
-                const diff = (dDate - now) / (1000 * 60 * 60 * 24);
-                
-                if(diff < 0) { deadlineClass = 'urgent'; urgentCount++; } // Просрочено
-                else if(diff <= 0) { deadlineClass = 'urgent'; urgentCount++; } // Сегодня
-                else if(diff <= 3) { deadlineClass = 'upcoming'; } // Скоро
-            }
-
-            html += `
-                <div class="card ${deadlineClass}" onclick="editOrder('${o.ID}')">
-                    <div class="card-header">
-                        <span class="nick">${o['Ник Instagram']}</span>
-                        <span class="price">${o.Цена} BYN</span>
-                    </div>
-                    <div style="font-size:14px; color:var(--hint-color);">${o['Тип изделия']}</div>
-                    <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:11px; background:#f0f0f0; padding:4px 8px; border-radius:6px; color:#555;">${o.Статус}</span>
-                        ${o.Дедлайн ? `<span style="font-size:11px; font-weight:500; color:${deadlineClass==='urgent'?'#ff3b30':'gray'}">📅 ${o.Дедлайн.split('T')[0]}</span>` : ''}
-                    </div>
-                </div>`;
-        });
-
-        const counter = document.getElementById('urgentCounter');
-        if(urgentCount > 0) { 
-            counter.innerText = `🔥 ${urgentCount} ГОРЯТ`; 
-            counter.style.display = 'inline-block'; 
-        } else { 
-            counter.style.display = 'none'; 
-        }
-
-        document.getElementById('mainContent').innerHTML = html || '<p style="text-align:center; color:gray; margin-top:50px;">Заказов нет</p>';
+        // Фоновая загрузка свежих данных
+        loadNetworkData();
+        lucide.createIcons();
     }
 
-    function renderClients() {
-        const clients = {};
-        // Клиенты собираются за всё время, фильтр месяца тут обычно не нужен, но можно добавить при желании
-        appData.orders.forEach(o => {
-            const nick = o['Ник Instagram'];
-            if(!nick) return;
-            if(!clients[nick]) clients[nick] = { count: 0, total: 0 };
-            clients[nick].count++;
-            clients[nick].total += parseFloat(o.Цена || 0);
-        });
-
-        let html = '<h3 style="margin:20px 20px 10px;">Топ клиентов</h3>';
-        Object.keys(clients).sort((a,b) => clients[b].total - clients[a].total).forEach(nick => {
-            html += `
-                <div class="client-row">
-                    <div class="client-avatar">${nick[0].toUpperCase()}</div>
-                    <div class="client-info">
-                        <div style="font-weight:bold;">${nick}</div>
-                        <div class="client-stats">Заказов: ${clients[nick].count}</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-weight:bold; color:var(--success);">${clients[nick].total.toFixed(2)}</div>
-                        <div style="font-size:10px; color:gray;">BYN</div>
-                    </div>
-                </div>`;
-        });
-        document.getElementById('mainContent').innerHTML = html;
-    }
-
-    function renderStats() {
-        // Простая статистика (можно расширить)
-        document.getElementById('mainContent').innerHTML = `
-            <div style="padding:20px; text-align:center; color:gray;">
-                <p>Здесь будут графики</p>
-            </div>
-        `;
-    }
-
-    function switchTab(tab, el) {
-        currentTab = tab;
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-        el.classList.add('active');
-        renderCurrentTab();
-    }
-
-    function toggleSort() {
-        sortByDeadline = !sortByDeadline;
-        window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
-        renderOrders();
-    }
-
-    // Modal Functions
-    function openOrderModal() {
-        document.getElementById('orderId').value = "";
-        document.getElementById('fNick').value = "";
-        document.getElementById('fItem').value = "";
-        document.getElementById('fPrice').value = "";
-        document.getElementById('fDate').value = "";
-        document.getElementById('delBtn').style.display = "none";
-        document.getElementById('orderModal').classList.add('active');
-    }
-
-    function editOrder(id) {
-        const o = appData.orders.find(x => x.ID == id);
-        if(!o) return;
-        document.getElementById('orderId').value = o.ID;
-        document.getElementById('fNick').value = o['Ник Instagram'];
-        document.getElementById('fItem').value = o['Тип изделия'];
-        document.getElementById('fPrice').value = o.Цена;
-        document.getElementById('fDate').value = o.Дедлайн ? o.Дедлайн.split('T')[0] : "";
-        document.getElementById('fStatus').value = o.Статус;
-        document.getElementById('delBtn').style.display = "block";
-        document.getElementById('orderModal').classList.add('active');
-    }
-
-    function closeModals() {
-        document.getElementById('orderModal').classList.remove('active');
-    }
-
-    async function saveOrder() {
-        const id = document.getElementById('orderId').value;
-        const data = {
-            action: id ? 'editEntry' : 'addOrder',
-            sheet: 'Orders',
-            id: id,
-            nick: document.getElementById('fNick').value,
-            item: document.getElementById('fItem').value,
-            price: document.getElementById('fPrice').value,
-            deadline: document.getElementById('fDate').value,
-            status: document.getElementById('fStatus').value
-        };
-        
-        closeModals();
-        
-        // Оптимистичное обновление UI (чтобы не ждать сервера)
-        // В реальном приложении тут лучше добавить локально в массив и перерисовать
-        
-        window.Telegram.WebApp.MainButton.showProgress();
+    // 2. Логика загрузки
+    async function loadNetworkData() {
+        updateSyncStatus('loading');
         try {
-            await fetch(API_URL, { method: 'POST', body: JSON.stringify(data) });
-            await loadData(); // Перезагружаем данные
-        } catch(e) {
-            alert('Ошибка сохранения');
+            const res = await fetch(SHEET_URL);
+            const data = await res.json();
+            
+            // Проверка, изменились ли данные
+            if (JSON.stringify(data) !== JSON.stringify(rawData)) {
+                rawData = data;
+                localStorage.setItem(CACHE_KEY, JSON.stringify(data)); // Сохраняем в кэш
+                generateMonthOptions();
+                render();
+                console.log("Network data updated UI");
+            }
+            updateSyncStatus('success');
+        } catch(e) { 
+            console.error(e);
+            updateSyncStatus('error');
+            if(!rawData) tg.showAlert("Нет интернета и нет кэша");
         }
-        window.Telegram.WebApp.MainButton.hideProgress();
     }
+
+    // Управление иконкой статуса
+    function updateSyncStatus(state) {
+        const el = document.getElementById('syncStatus');
+        if (state === 'loading') {
+            el.innerHTML = '<i data-lucide="loader-2" class="spin" style="width:16px;"></i>';
+        } else if (state === 'success') {
+            el.innerHTML = '<i data-lucide="check" style="width:16px; color:var(--success);"></i>';
+            setTimeout(() => el.innerHTML = '', 3000); // Скрыть галочку через 3 сек
+        } else if (state === 'cached') {
+            el.innerHTML = '<i data-lucide="cloud" style="width:16px; opacity:0.5;"></i>';
+        } else if (state === 'error') {
+            el.innerHTML = '<i data-lucide="wifi-off" style="width:16px; color:var(--danger);"></i>';
+        }
+        lucide.createIcons();
+    }
+
+    // --- Остальная логика без изменений (фильтры, рендер, сохранение) ---
+    
+    function generateMonthOptions() {
+        if(!rawData) return;
+        const months = new Set();
+        if (rawData.orders) rawData.orders.forEach(o => { if(o['Дата']) months.add(o['Дата'].substring(0, 7)); });
+        const sortedMonths = Array.from(months).sort().reverse();
+        const select = document.getElementById('monthSelect');
+        const oldVal = select.value || 'all';
+        select.innerHTML = '<option value="all">За все время</option>';
+        sortedMonths.forEach(m => {
+            const d = new Date(m + '-01');
+            const l = d.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
+            select.innerHTML += `<option value="${m}">${l.charAt(0).toUpperCase() + l.slice(1)}</option>`;
+        });
+        select.value = oldVal;
+    }
+
+    function handleMonthChange(val) {
+        currentDateFilter = val;
+        document.getElementById('currentMonthLabel').innerText = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
+        render();
+    }
+
+    function calculateBudget() {
+        if (!rawData) return "0.00";
+        let rev = 0, exp = 0;
+        const filter = (item, dateField) => currentDateFilter === 'all' || (item[dateField] && item[dateField].startsWith(currentDateFilter));
+        
+        rawData.orders.filter(o => filter(o, 'Дата')).forEach(o => rev += parseFloat(o['Цена'] || 0));
+        rawData.shipments.filter(s => filter(s, 'Дата отправки')).forEach(s => exp += parseFloat(s['Стоимость'] || 0));
+        rawData.purchases.filter(p => filter(p, 'Дата')).forEach(p => exp += parseFloat(p['Сумма'] || 0));
+        return (rev - exp).toFixed(2);
+    }
+
+    function render() {
+        if (!rawData) return;
+        document.getElementById('totalBalance').innerText = calculateBudget();
+        document.getElementById('periodLabel').innerText = currentDateFilter === 'all' ? "" : "(месяц)";
+        
+        const cont = document.getElementById('app-content');
+        if (currentTab === 'stats') { renderStats(cont); return; }
+
+        document.getElementById('statusFilterBar').style.display = (currentTab === 'orders') ? 'flex' : 'none';
+        
+        let html = '';
+        let list = [];
+        const dateKey = currentTab==='orders'?'Дата':(currentTab==='shipments'?'Дата отправки':'Дата');
+        
+        // Фильтрация
+        if (currentTab === 'orders') list = rawData.orders;
+        else if (currentTab === 'shipments') list = rawData.shipments;
+        else list = rawData.purchases;
+        
+        // Добавляем индексы для редактирования
+        list = list.map((item, i) => ({...item, _idx: i})).filter(item => {
+            if (currentDateFilter !== 'all') {
+                if(!item[dateKey]) return false;
+                if(!item[dateKey].startsWith(currentDateFilter)) return false;
+            }
+            if (searchQuery) {
+                const searchStr = (item['Ник Instagram'] || item['ФИО'] || item['Тип покупки'] || '').toLowerCase();
+                if(!searchStr.includes(searchQuery)) return false;
+            }
+            if (currentTab === 'orders' && currentStatusFilter !== 'Все' && item.Статус !== currentStatusFilter) return false;
+            return true;
+        });
+
+        if (list.length === 0) { cont.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-secondary);">Пусто</div>'; return; }
+
+        list.reverse().forEach(item => {
+            if (currentTab === 'orders') {
+                const statusClass = item.Статус === 'Новый' ? 'new' : (item.Статус === 'В работе' ? 'work' : 'done');
+                html += `<div class="card" onclick="editOrder('${item.ID}')">
+                    <div class="card-header"><div class="card-title">${item['Ник Instagram']}</div><div class="card-price">${item['Цена']}</div></div>
+                    <div class="card-subtitle">${item['Тип изделия']}</div>
+                    <div class="card-footer"><span class="status-badge ${statusClass}">${item.Статус}</span><span style="font-size:12px; color:gray;">${fmtDate(item['Дата'])}</span></div>
+                </div>`;
+            } else if (currentTab === 'shipments') {
+                html += `<div class="card" onclick="editShipment(${item._idx})">
+                    <div class="card-header"><div class="card-title">${item['ФИО']}</div><div class="card-price" style="color:var(--text-primary)">-${item['Стоимость']}</div></div>
+                    <div class="card-subtitle">${item['Трек номер']}</div>
+                    <div class="card-footer"><span style="font-size:12px; color:gray;">${fmtDate(item['Дата отправки'])}</span></div>
+                </div>`;
+            } else {
+                html += `<div class="card" onclick="editPurchase(${item._idx})">
+                    <div class="card-header"><div class="card-title">${item['Тип покупки']}</div><div class="card-price" style="color:var(--danger)">-${item['Сумма']}</div></div>
+                    <div class="card-footer"><span style="font-size:12px; color:gray;">${fmtDate(item['Дата'])}</span></div>
+                </div>`;
+            }
+        });
+        cont.innerHTML = html;
+    }
+
+    function renderStats(cont) {
+        cont.innerHTML = '<div class="card"><canvas id="mainChart"></canvas></div><div class="card" style="margin-top:10px; padding:15px;"><h3 style="margin:0 0 10px;">Статистика</h3><p>Всего заказов: <b>'+rawData.orders.length+'</b></p></div>';
+        const counts = {};
+        rawData.orders.forEach(o => { counts[o['Тип изделия']] = (counts[o['Тип изделия']]||0)+1; });
+        new Chart(document.getElementById('mainChart'), {
+            type: 'doughnut',
+            data: { labels: Object.keys(counts), datasets: [{ data: Object.values(counts), backgroundColor: ['#007AFF', '#34C759', '#FF9500', '#FF2D55'] }] },
+            options: { plugins: { legend: { position: 'right' } } }
+        });
+    }
+
+    function fmtDate(d) { return d ? new Date(d).toLocaleDateString('ru-RU') : ''; }
+    function switchTab(t, e) { currentTab=t; document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); e.classList.add('active'); render(); }
+    function setFilter(s, e) { currentStatusFilter=s; document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active')); e.classList.add('active'); render(); }
+    function handleSearch(v) { searchQuery=v.toLowerCase(); render(); }
+    
+    // --- Модальные окна и API ---
+    function openModal(id) {
+        const m = document.getElementById(id || (currentTab==='orders'?'orderModal':(currentTab==='shipments'?'shipModal':'purchaseModal')));
+        if(!id) { m.querySelectorAll('input,select').forEach(i=>i.value=''); if(m.querySelector('[type="date"]')) m.querySelector('[type="date"]').value=new Date().toISOString().split('T')[0]; }
+        m.classList.add('active'); document.getElementById('overlay').classList.add('active');
+    }
+    function closeModals() { document.querySelectorAll('.sheet, .modal-overlay').forEach(e=>e.classList.remove('active')); }
+    
+    function editOrder(id) { const o=rawData.orders.find(x=>x.ID==id); document.getElementById('editOrderId').value=id; document.getElementById('ordNick').value=o['Ник Instagram']; document.getElementById('ordPrice').value=o['Цена']; document.getElementById('ordDate').value=o['Дата'].split('T')[0]; openModal('orderModal'); }
+    function editShipment(i) { const s=rawData.shipments[i]; document.getElementById('editShipIndex').value=i; document.getElementById('shipFio').value=s['ФИО']; document.getElementById('shipCost').value=s['Стоимость']; document.getElementById('shipDate').value=s['Дата отправки']; openModal('shipModal'); }
+    function editPurchase(i) { const p=rawData.purchases[i]; document.getElementById('editPurIndex').value=i; document.getElementById('purType').value=p['Тип покупки']; document.getElementById('purAmount').value=p['Сумма']; document.getElementById('purDate').value=p['Дата']?p['Дата'].split('T')[0]:''; openModal('purchaseModal'); }
+
+    async function sendRequest(data) {
+        closeModals(); tg.MainButton.showProgress();
+        try { await fetch(SHEET_URL, {method:'POST', mode:'no-cors', body:JSON.stringify(data)}); tg.MainButton.hideProgress(); setTimeout(loadNetworkData, 1000); }
+        catch(e) { tg.MainButton.hideProgress(); alert('Ошибка'); }
+    }
+    function saveOrder() { 
+        const id=document.getElementById('editOrderId').value, row={ 'Ник Instagram':document.getElementById('ordNick').value, 'Тип изделия':document.getElementById('ordItem').value, 'Цена':document.getElementById('ordPrice').value, 'Дата':document.getElementById('ordDate').value, 'Дедлайн':document.getElementById('ordDeadline').value, 'Комментарий':document.getElementById('ordComm').value };
+        sendRequest(id?{action:'editEntry', sheet:'Orders', id, rowData:row}:{action:'addOrder', ...row, nick:row['Ник Instagram'], item:row['Тип изделия'], price:row['Цена'], deadline:row['Дедлайн']});
+    }
+    function saveShipment() { const i=document.getElementById('editShipIndex').value, row={'Дата отправки':document.getElementById('shipDate').value, 'ФИО':document.getElementById('shipFio').value, 'Трек номер':document.getElementById('shipTrack').value, 'Стоимость':document.getElementById('shipCost').value}; sendRequest(i?{action:'editEntry', sheet:'Shipments', rowIndex:parseInt(i), rowData:row}:{action:'addShipment', ...row, date:row['Дата отправки'], fio:row['ФИО'], track:row['Трек номер'], cost:row['Стоимость']}); }
+    function savePurchase() { const i=document.getElementById('editPurIndex').value, row={'Тип покупки':document.getElementById('purType').value, 'Сумма':document.getElementById('purAmount').value, 'Дата':document.getElementById('purDate').value}; sendRequest(i?{action:'editEntry', sheet:'Purchases', rowIndex:parseInt(i), rowData:row}:{action:'addPurchase', ...row, type:row['Тип покупки'], amount:row['Сумма']}); }
+    function deleteEntry(s,id,i) { if(confirm('Удалить?')) sendRequest({action:'deleteEntry', sheet:s, id, rowIndex:parseInt(i)}); }
+
+    init();
 </script>
 </body>
 </html>

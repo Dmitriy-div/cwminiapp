@@ -20,21 +20,70 @@
             --radius: 20px;
         }
 
-        body { font-family: -apple-system, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding-bottom: 120px; }
+        body { 
+            font-family: -apple-system, sans-serif; 
+            background: var(--bg-color); 
+            color: var(--text-color); 
+            margin: 0; 
+            padding-bottom: 120px;
+            /* Важный отступ для защиты от кнопок Telegram */
+            padding-top: var(--tg-viewport-safe-area-inset-top, 20px); 
+        }
         
         /* Header & Stats */
-        .header { background: var(--card-bg); padding: 20px; border-radius: 0 0 25px 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .balance-val { font-size: 32px; font-weight: 800; text-align: center; margin: 10px 0; color: var(--accent); }
+        .header { 
+            background: var(--card-bg); 
+            /* Увеличенный отступ сверху, чтобы контент спустился ниже кнопок TG */
+            padding: 40px 20px 20px; 
+            border-radius: 0 0 25px 25px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+            text-align: center;
+        }
         
-        /* Search & Sort Bar */
-        .search-container { padding: 10px 20px; display: flex; gap: 10px; }
-        .search-input { flex: 1; background: var(--card-bg); border: none; padding: 12px 15px; border-radius: 12px; color: var(--text-color); font-size: 14px; outline: none; }
-        .sort-btn { background: var(--card-bg); border: none; padding: 10px; border-radius: 12px; color: var(--hint-color); display: flex; align-items: center; }
+        .month-select-wrapper {
+            display: inline-block;
+            background: var(--bg-color);
+            padding: 5px 15px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+        }
 
-        /* Order Cards with Deadline Logic */
-        .card { background: var(--card-bg); margin: 0 20px 12px; padding: 16px; border-radius: var(--radius); position: relative; border-left: 5px solid transparent; transition: 0.2s; }
-        .card.urgent { border-left-color: var(--danger); background: #fff5f5; } /* Просрочено или сегодня */
-        .card.upcoming { border-left-color: var(--warning); } /* Скоро */
+        #monthSelect {
+            border: none;
+            background: transparent;
+            font-weight: bold;
+            color: var(--text-color);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .balance-val { 
+            font-size: 36px; 
+            font-weight: 800; 
+            color: var(--accent);
+            margin-top: 5px;
+        }
+        
+        .urgent-badge {
+            background: var(--danger);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        /* Search & Sort Bar */
+        .search-container { padding: 15px 20px 5px; display: flex; gap: 10px; }
+        .search-input { flex: 1; background: var(--card-bg); border: none; padding: 12px 15px; border-radius: 12px; color: var(--text-color); font-size: 14px; outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .sort-btn { background: var(--card-bg); border: none; padding: 10px; border-radius: 12px; color: var(--hint-color); display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+
+        /* Order Cards */
+        .card { background: var(--card-bg); margin: 0 20px 12px; padding: 16px; border-radius: var(--radius); position: relative; border-left: 5px solid transparent; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .card.urgent { border-left-color: var(--danger); background: #fff5f5; }
+        .card.upcoming { border-left-color: var(--warning); }
         
         .card-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
         .nick { font-weight: 700; font-size: 16px; }
@@ -66,19 +115,21 @@
 <body>
 
     <div class="header">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <select id="monthSelect" onchange="loadData()" style="border:none; background:none; font-weight:bold; color:var(--hint-color);"></select>
-            <div id="urgentCounter" style="background:var(--danger); color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:bold; display:none;">🔥 0 ГОРЯТ</div>
+        <div id="urgentCounter" class="urgent-badge" style="display:none;">🔥 0 ГОРЯТ</div>
+        
+        <div class="month-select-wrapper">
+            <select id="monthSelect" onchange="renderCurrentTab()"></select>
         </div>
+        
         <div class="balance-val" id="totalProfit">0.00 BYN</div>
     </div>
 
     <div id="searchBar" class="search-container">
-        <input type="text" id="searchInput" class="search-input" placeholder="Поиск по нику или заказу..." oninput="renderOrders()">
+        <input type="text" id="searchInput" class="search-input" placeholder="Поиск..." oninput="renderOrders()">
         <button class="sort-btn" onclick="toggleSort()"><i data-lucide="arrow-up-down" size="20"></i></button>
     </div>
 
-    <div id="mainContent"></div>
+    <div id="mainContent" style="padding-top: 10px;"></div>
 
     <button class="fab" onclick="openOrderModal()"><i data-lucide="plus"></i></button>
 
@@ -108,30 +159,78 @@
     </div>
 
 <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbxHt_Tqe2trJbfJi-W2sbEMIWCFFhuhjyxFguZwSQ-qRbJZ8NNIJO9RceyxwJEwHMaU/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbwnTCjrsDu2sq8xq96yz5Yjqs7HiPD79BkdSMesDa4S_BbTfOg81yZzYsF8Ymg8NV0A/exec";
     let appData = { orders: [], purchases: [], shipments: [] };
     let currentTab = 'orders';
     let sortByDeadline = false;
 
-    async function loadData() {
-        const res = await fetch(API_URL);
-        appData = await res.json();
-        if(appData.orders.length > 0 && document.getElementById('monthSelect').innerHTML === "") {
-            initMonths();
-        }
-        renderCurrentTab();
-        lucide.createIcons();
+    // Инициализация
+    window.onload = init;
+    function init() {
+        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.expand();
+        loadData();
     }
 
+    async function loadData() {
+        try {
+            const res = await fetch(API_URL);
+            appData = await res.json();
+            
+            // Если селект пустой, заполняем месяцами
+            if(document.getElementById('monthSelect').innerHTML === "") {
+                initMonths();
+            }
+            renderCurrentTab();
+            lucide.createIcons();
+        } catch (e) {
+            console.error("Ошибка загрузки:", e);
+        }
+    }
+
+    // Собираем уникальные месяцы из заказов
     function initMonths() {
-        const months = [...new Set(appData.orders.map(o => o.Дата.substring(0, 7)))].sort().reverse();
+        const months = new Set();
+        appData.orders.forEach(o => {
+            if(o.Дата) months.add(o.Дата.substring(0, 7)); // YYYY-MM
+        });
+        
+        // Сортировка: от новых к старым
+        const sortedMonths = [...months].sort().reverse();
+        
         const sel = document.getElementById('monthSelect');
-        sel.innerHTML = '<option value="all">Все время</option>';
-        months.forEach(m => sel.innerHTML += `<option value="${m}">${m}</option>`);
+        sel.innerHTML = '<option value="all">За все время</option>';
+        
+        sortedMonths.forEach(m => {
+            sel.innerHTML += `<option value="${m}">${m}</option>`;
+        });
+    }
+
+    function calculateBudget(month) {
+        let total = 0;
+        
+        // Считаем доходы (заказы)
+        appData.orders.forEach(o => {
+            // Фильтр по месяцу: если "all" или дата начинается с "YYYY-MM"
+            const matchMonth = month === 'all' || (o.Дата && o.Дата.startsWith(month));
+            
+            // Считаем, если подходит по месяцу. 
+            // Дополнительно можно проверять статус "Готов" или оплату, если нужно.
+            // Сейчас считает сумму всех созданных заказов в этом месяце.
+            if (matchMonth) {
+                total += parseFloat(o.Цена || 0);
+            }
+        });
+
+        // Обновляем цифру в шапке
+        document.getElementById('totalProfit').innerText = total.toFixed(2) + " BYN";
     }
 
     function renderCurrentTab() {
-        const cont = document.getElementById('mainContent');
+        // Сразу пересчитываем бюджет при любой перерисовке
+        const selectedMonth = document.getElementById('monthSelect').value;
+        calculateBudget(selectedMonth);
+
         const search = document.getElementById('searchBar');
         search.style.display = (currentTab === 'orders') ? 'flex' : 'none';
 
@@ -143,9 +242,10 @@
     function renderOrders() {
         const query = document.getElementById('searchInput').value.toLowerCase();
         const month = document.getElementById('monthSelect').value;
+        
         let filtered = appData.orders.filter(o => {
             const matchSearch = o['Ник Instagram'].toLowerCase().includes(query) || o['Тип изделия'].toLowerCase().includes(query);
-            const matchMonth = month === 'all' || o.Дата.startsWith(month);
+            const matchMonth = month === 'all' || (o.Дата && o.Дата.startsWith(month));
             return matchSearch && matchMonth;
         });
 
@@ -153,7 +253,7 @@
         if(sortByDeadline) {
             filtered.sort((a, b) => new Date(a.Дедлайн || '9999') - new Date(b.Дедлайн || '9999'));
         } else {
-            filtered.reverse();
+            filtered.reverse(); // Новые сверху
         }
 
         let html = '';
@@ -163,11 +263,14 @@
 
         filtered.forEach(o => {
             let deadlineClass = '';
+            // Проверка дедлайна только для не готовых заказов
             if(o.Дедлайн && o.Статус !== 'Готов') {
                 const dDate = new Date(o.Дедлайн);
                 const diff = (dDate - now) / (1000 * 60 * 60 * 24);
-                if(diff <= 0) { deadlineClass = 'urgent'; urgentCount++; }
-                else if(diff <= 3) { deadlineClass = 'upcoming'; }
+                
+                if(diff < 0) { deadlineClass = 'urgent'; urgentCount++; } // Просрочено
+                else if(diff <= 0) { deadlineClass = 'urgent'; urgentCount++; } // Сегодня
+                else if(diff <= 3) { deadlineClass = 'upcoming'; } // Скоро
             }
 
             html += `
@@ -178,30 +281,35 @@
                     </div>
                     <div style="font-size:14px; color:var(--hint-color);">${o['Тип изделия']}</div>
                     <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:11px; background:#eee; padding:3px 8px; border-radius:5px;">${o.Статус}</span>
-                        ${o.Дедлайн ? `<span style="font-size:11px; color:${deadlineClass==='urgent'?'red':'gray'}">📅 ${o.Дедлайн.split('T')[0]}</span>` : ''}
+                        <span style="font-size:11px; background:#f0f0f0; padding:4px 8px; border-radius:6px; color:#555;">${o.Статус}</span>
+                        ${o.Дедлайн ? `<span style="font-size:11px; font-weight:500; color:${deadlineClass==='urgent'?'#ff3b30':'gray'}">📅 ${o.Дедлайн.split('T')[0]}</span>` : ''}
                     </div>
                 </div>`;
         });
 
         const counter = document.getElementById('urgentCounter');
-        if(urgentCount > 0) { counter.innerText = `🔥 ${urgentCount} ГОРЯТ`; counter.style.display = 'block'; }
-        else counter.style.display = 'none';
+        if(urgentCount > 0) { 
+            counter.innerText = `🔥 ${urgentCount} ГОРЯТ`; 
+            counter.style.display = 'inline-block'; 
+        } else { 
+            counter.style.display = 'none'; 
+        }
 
-        document.getElementById('mainContent').innerHTML = html || '<p style="text-align:center; color:gray;">Ничего не найдено</p>';
+        document.getElementById('mainContent').innerHTML = html || '<p style="text-align:center; color:gray; margin-top:50px;">Заказов нет</p>';
     }
 
     function renderClients() {
-        // Логика клиентской базы (LTV)
         const clients = {};
+        // Клиенты собираются за всё время, фильтр месяца тут обычно не нужен, но можно добавить при желании
         appData.orders.forEach(o => {
             const nick = o['Ник Instagram'];
+            if(!nick) return;
             if(!clients[nick]) clients[nick] = { count: 0, total: 0 };
             clients[nick].count++;
             clients[nick].total += parseFloat(o.Цена || 0);
         });
 
-        let html = '<h3 style="margin:20px;">Мои клиенты</h3>';
+        let html = '<h3 style="margin:20px 20px 10px;">Топ клиентов</h3>';
         Object.keys(clients).sort((a,b) => clients[b].total - clients[a].total).forEach(nick => {
             html += `
                 <div class="client-row">
@@ -212,7 +320,7 @@
                     </div>
                     <div style="text-align:right;">
                         <div style="font-weight:bold; color:var(--success);">${clients[nick].total.toFixed(2)}</div>
-                        <div style="font-size:10px; color:gray;">Всего BYN</div>
+                        <div style="font-size:10px; color:gray;">BYN</div>
                     </div>
                 </div>`;
         });
@@ -220,12 +328,12 @@
     }
 
     function renderStats() {
+        // Простая статистика (можно расширить)
         document.getElementById('mainContent').innerHTML = `
-            <div style="padding:20px;">
-                <canvas id="statChart" width="400" height="400"></canvas>
+            <div style="padding:20px; text-align:center; color:gray;">
+                <p>Здесь будут графики</p>
             </div>
         `;
-        // Здесь можно вызвать Chart.js для отрисовки графиков
     }
 
     function switchTab(tab, el) {
@@ -241,16 +349,20 @@
         renderOrders();
     }
 
-    // Modal Logic
+    // Modal Functions
     function openOrderModal() {
         document.getElementById('orderId').value = "";
         document.getElementById('fNick').value = "";
+        document.getElementById('fItem').value = "";
+        document.getElementById('fPrice').value = "";
+        document.getElementById('fDate').value = "";
         document.getElementById('delBtn').style.display = "none";
         document.getElementById('orderModal').classList.add('active');
     }
 
     function editOrder(id) {
         const o = appData.orders.find(x => x.ID == id);
+        if(!o) return;
         document.getElementById('orderId').value = o.ID;
         document.getElementById('fNick').value = o['Ник Instagram'];
         document.getElementById('fItem').value = o['Тип изделия'];
@@ -266,27 +378,31 @@
     }
 
     async function saveOrder() {
+        const id = document.getElementById('orderId').value;
         const data = {
-            action: document.getElementById('orderId').value ? 'editEntry' : 'addOrder',
+            action: id ? 'editEntry' : 'addOrder',
             sheet: 'Orders',
-            id: document.getElementById('orderId').value,
+            id: id,
             nick: document.getElementById('fNick').value,
             item: document.getElementById('fItem').value,
             price: document.getElementById('fPrice').value,
             deadline: document.getElementById('fDate').value,
             status: document.getElementById('fStatus').value
         };
+        
         closeModals();
+        
+        // Оптимистичное обновление UI (чтобы не ждать сервера)
+        // В реальном приложении тут лучше добавить локально в массив и перерисовать
+        
         window.Telegram.WebApp.MainButton.showProgress();
-        await fetch(API_URL, { method: 'POST', body: JSON.stringify(data) });
-        loadData();
-    }
-
-    window.onload = init;
-    function init() {
-        window.Telegram.WebApp.ready();
-        window.Telegram.WebApp.expand();
-        loadData();
+        try {
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify(data) });
+            await loadData(); // Перезагружаем данные
+        } catch(e) {
+            alert('Ошибка сохранения');
+        }
+        window.Telegram.WebApp.MainButton.hideProgress();
     }
 </script>
 </body>
